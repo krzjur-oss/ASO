@@ -1,0 +1,6 @@
+{
+  "name": "Wirtualny Terminal i Eksplorator",
+  "description": "Interaktywny symulator Windows 11 i Linux Ubuntu dla uczniów szkoły podstawowej do nauki zarządzania plikami i folderami.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
