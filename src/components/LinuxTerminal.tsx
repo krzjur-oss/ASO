@@ -60,6 +60,16 @@ export default function LinuxTerminal({
   const [showApplicationsMenu, setShowApplicationsMenu] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
+  // Dynamic ticking clock state
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   const [inputVal, setInputVal] = useState('');
   const [terminalLog, setTerminalLog] = useState<TerminalLine[]>([
     { text: 'Witaj w terminalu Linux Ubuntu (Wersja edukacyjna)!', type: 'success', timestamp: getCurrentDateString() },
@@ -154,6 +164,13 @@ export default function LinuxTerminal({
       case 'm12_linux_chmod_exec':
         message = 'Wpisz polecenie „chmod +x gra.py” (lub 755)';
         break;
+      case 'm15_linux_grep':
+        if (currentPathId !== 'documents') {
+          message = 'Przejdź do folderu Documents wpisując „cd Documents”';
+        } else {
+          message = 'Wpisz polecenie „grep haslo raport.txt”';
+        }
+        break;
       default:
         targetId = 'btn-linux-hint';
         message = 'To zadanie wykonaj w systemie Windows';
@@ -240,6 +257,7 @@ export default function LinuxTerminal({
           { text: '  touch [nazwa]   - Tworzy nowy pusty plik (np. touch notatka.txt)', type: 'output', timestamp: getCurrentDateString() },
           { text: '  rm [nazwa]      - Usuwa plik tekstowy (np. rm notatka.txt)', type: 'output', timestamp: getCurrentDateString() },
           { text: '  cat [nazwa]     - Wyświetla zawartość pliku na ekranie (np. cat welcome.txt)', type: 'output', timestamp: getCurrentDateString() },
+          { text: '  grep [wzór] [f] - Wyszukuje tekst wewnątrz pliku (np. grep haslo raport.txt)', type: 'output', timestamp: getCurrentDateString() },
           { text: '  chmod [uprawnia] [plik] - Zmienia uprawnienia (np. chmod 600 tajne.txt lub chmod +x gra.py)', type: 'output', timestamp: getCurrentDateString() },
           { text: '  clear           - Czyści ekran konsoli', type: 'output', timestamp: getCurrentDateString() },
         ];
@@ -558,6 +576,47 @@ export default function LinuxTerminal({
         break;
       }
 
+      case 'grep': {
+        const pattern = args[0];
+        const fileArg = args[1];
+        if (!pattern || !fileArg) {
+          outputs = [{ text: 'grep: brakujące argumenty (użycie: grep [wzorzec] [nazwa_pliku], np. grep haslo raport.txt)', type: 'error', timestamp: getCurrentDateString() }];
+          break;
+        }
+
+        const children = getChildren(vfs, currentPathId);
+        const target = children.find(child => child.name === fileArg && child.type === 'file');
+
+        if (target) {
+          const lines = (target.content || '').split('\n');
+          const matchingLines = lines.filter(line => line.toLowerCase().includes(pattern.toLowerCase()));
+          if (matchingLines.length > 0) {
+            outputs = matchingLines.map(line => {
+              // Highlight matches
+              const partsOfLine = line.split(new RegExp(`(${pattern})`, 'gi'));
+              const coloredText = partsOfLine.map(part => {
+                if (part.toLowerCase() === pattern.toLowerCase()) {
+                  return `\x1b[31m${part}\x1b[0m`;
+                }
+                return part;
+              }).join('');
+
+              return {
+                text: coloredText,
+                type: 'output' as const,
+                timestamp: getCurrentDateString()
+              };
+            });
+            onAddXP(15);
+          } else {
+            outputs = [{ text: `(brak dopasowań dla wzorca "${pattern}")`, type: 'output', timestamp: getCurrentDateString() }];
+          }
+        } else {
+          outputs = [{ text: `grep: błąd: plik "${fileArg}" nie istnieje!`, type: 'error', timestamp: getCurrentDateString() }];
+        }
+        break;
+      }
+
       case 'clear':
         setTerminalLog([]);
         return;
@@ -740,6 +799,21 @@ export default function LinuxTerminal({
                               {cleanName}
                             </span>
                           );
+                        })}
+                      </div>
+                    );
+                  }
+
+                  if (line.text.includes('\x1b[31m')) {
+                    const parts = line.text.split(/(\x1b\[31m.*?\x1b\[0m)/g);
+                    return (
+                      <div key={idx} className={`leading-relaxed whitespace-pre-wrap ${colorClass}`}>
+                        {parts.map((part, pIdx) => {
+                          if (part.startsWith('\x1b[31m') && part.endsWith('\x1b[0m')) {
+                            const cleanText = part.substring(7, part.length - 4);
+                            return <span key={pIdx} className="text-red-400 font-bold bg-red-500/10 px-1 rounded">{cleanText}</span>;
+                          }
+                          return part;
                         })}
                       </div>
                     );
@@ -954,9 +1028,45 @@ export default function LinuxTerminal({
         onClick={(e) => e.stopPropagation()}
         id="linux-taskbar"
       >
-        {/* Left branding text */}
-        <div className="text-[10px] text-orange-400 font-mono font-bold hidden sm:block">
-          <span>ubuntu@akademia-linux</span>
+        {/* Left branding text & Open Windows list */}
+        <div className="flex items-center gap-3">
+          <div className="text-[10px] text-orange-400 font-mono font-bold hidden sm:block">
+            <span>ubuntu@akademia-linux</span>
+          </div>
+          {openApps.length > 0 && (
+            <div className="hidden md:flex items-center gap-1.5 border-l border-white/15 pl-3">
+              <span className="text-[9px] text-[#c2b5bc]/60 uppercase tracking-wider font-mono mr-1">Open windows:</span>
+              {openApps.map(app => {
+                const isActive = activeApp === app;
+                const appName = app === 'terminal' ? 'Terminal' : app === 'browser' ? 'Nautilus Pliki' : 'gedit Notatnik';
+                const appIcon = app === 'terminal' ? '📟' : app === 'browser' ? '📁' : '📝';
+                return (
+                  <button
+                    key={app}
+                    onClick={() => {
+                      if (isActive) {
+                        setActiveApp(null); // minimize
+                      } else {
+                        if (!openApps.includes(app)) {
+                          setOpenApps(prev => [...prev, app]);
+                        }
+                        setActiveApp(app as any);
+                      }
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition-all flex items-center gap-1.5 border cursor-pointer ${
+                      isActive 
+                        ? 'bg-orange-600/20 text-orange-400 border-orange-500/40 shadow-2xs' 
+                        : 'bg-[#2c1a24]/50 text-[#c2b5bc]/70 border-white/5 hover:bg-white/5'
+                    }`}
+                  >
+                    <span>{appIcon}</span>
+                    <span>{appName}</span>
+                    {isActive && <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-ping"></span>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Center centered Dock shortcut icons */}
@@ -1058,8 +1168,8 @@ export default function LinuxTerminal({
             <span>🔊</span>
           </div>
           <div className="flex flex-col items-end leading-none">
-            <span className="text-[#81a1c1]">{new Date().toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}</span>
-            <span className="text-[8px] text-[#4a2e3f] mt-0.5">{new Date().toLocaleDateString('pl-PL')}</span>
+            <span className="text-[#81a1c1]">{currentTime.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+            <span className="text-[8px] text-[#4a2e3f] mt-0.5">{currentTime.toLocaleDateString('pl-PL')}</span>
           </div>
         </div>
 

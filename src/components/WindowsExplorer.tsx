@@ -75,6 +75,16 @@ export default function WindowsExplorer({
   const [activeNotepadFileId, setActiveNotepadFileId] = useState<string | null>(null);
   const [startMenuOpen, setStartMenuOpen] = useState(false);
 
+  // Dynamic ticking clock state
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   // Search state for Explorer
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -288,6 +298,19 @@ export default function WindowsExplorer({
         break;
       }
 
+      case 'm16_win_search':
+        if (!searchQuery.toLowerCase().includes('projekt')) {
+          targetId = 'explorer-search-input';
+          message = 'Wpisz „projekt” w wyszukiwarce u góry po prawej stronie.';
+        } else {
+          const foundNode = Object.values(vfs).find(node => node.name === 'projekt_semestralny.docx');
+          if (foundNode && selectedNodeId !== foundNode.id) {
+            targetId = `explorer-item-${foundNode.id}`;
+            message = 'Kliknij lewym przyciskiem na plik „projekt_semestralny.docx”, aby go zaznaczyć.';
+          }
+        }
+        break;
+
       default:
         targetId = 'btn-windows-hint';
         message = 'To zadanie wykonaj w terminalu Linux';
@@ -295,7 +318,7 @@ export default function WindowsExplorer({
     }
 
     setHintTarget(targetId ? { id: targetId, message } : null);
-  }, [showHint, activeMissionId, currentPathId, selectedNodeId, vfs, clipboardNodeId]);
+  }, [showHint, activeMissionId, currentPathId, selectedNodeId, vfs, clipboardNodeId, searchQuery]);
 
   useEffect(() => {
     if (!showHint || !hintTarget) {
@@ -949,7 +972,11 @@ export default function WindowsExplorer({
                   type="text" 
                   placeholder="Szukaj..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSearchQuery(val);
+                    onActionTriggered(`search:${val.toLowerCase()}`);
+                  }}
                   className="w-full pl-9 pr-3 py-1.5 border border-[#D8DEE9] rounded-xl text-xs bg-white focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#5E81AC] text-[#2E3440] shadow-2xs"
                   id="explorer-search-input"
                 />
@@ -1454,6 +1481,7 @@ export default function WindowsExplorer({
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedNodeId(node.id);
+                            onActionTriggered(`select:${node.id}`);
                           }}
                           onDoubleClick={() => handleFolderClick(node)}
                           onContextMenu={(e) => {
@@ -1568,9 +1596,45 @@ export default function WindowsExplorer({
         onClick={(e) => e.stopPropagation()}
         id="windows-taskbar"
       >
-        {/* Left branding widget */}
-        <div className="text-[10px] text-gray-600 font-bold font-sans hidden sm:block">
-          <span>Akademia Windows 11</span>
+        {/* Left branding widget & Open Windows list */}
+        <div className="flex items-center gap-3">
+          <div className="text-[10px] text-[#5e81ac] font-bold font-sans hidden sm:block">
+            <span>Akademia Windows 11</span>
+          </div>
+          {openApps.length > 0 && (
+            <div className="hidden md:flex items-center gap-1.5 border-l border-gray-300 pl-3">
+              <span className="text-[9px] text-gray-400 uppercase tracking-wider font-extrabold mr-1">Otwarte okna:</span>
+              {openApps.map(app => {
+                const isActive = activeApp === app;
+                const appName = app === 'explorer' ? 'Eksplorator plików' : app === 'cmd' ? 'Wiersz poleceń' : 'Notatnik';
+                const appIcon = app === 'explorer' ? '📁' : app === 'cmd' ? '💻' : '📝';
+                return (
+                  <button
+                    key={app}
+                    onClick={() => {
+                      if (isActive) {
+                        setActiveApp(null); // minimize
+                      } else {
+                        if (!openApps.includes(app)) {
+                          setOpenApps(prev => [...prev, app]);
+                        }
+                        setActiveApp(app as any);
+                      }
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1.5 border cursor-pointer ${
+                      isActive 
+                        ? 'bg-blue-50 text-blue-600 border-blue-200 shadow-2xs' 
+                        : 'bg-gray-100/50 text-gray-500 border-gray-200/50 hover:bg-gray-100'
+                    }`}
+                  >
+                    <span>{appIcon}</span>
+                    <span>{appName}</span>
+                    {isActive && <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-ping"></span>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Center centered icons */}
@@ -1674,8 +1738,8 @@ export default function WindowsExplorer({
             <span>🔊</span>
           </div>
           <div className="flex flex-col items-end leading-none">
-            <span>{new Date().toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}</span>
-            <span className="text-[8px] text-gray-400 mt-0.5">{new Date().toLocaleDateString('pl-PL')}</span>
+            <span>{currentTime.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+            <span className="text-[8px] text-gray-400 mt-0.5">{currentTime.toLocaleDateString('pl-PL')}</span>
           </div>
         </div>
 

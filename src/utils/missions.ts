@@ -83,11 +83,25 @@ export const BADGES: Badge[] = [
     requirement: 'Ukończenie Misji 13'
   },
   {
+    id: 'badge_linux_grep',
+    title: 'Detektyw Tekstu',
+    description: 'Pomyślnie wyszukano ukryte frazy w plikach tekstowych za pomocą polecenia grep.',
+    icon: '🔍',
+    requirement: 'Ukończenie Misji 15'
+  },
+  {
+    id: 'badge_win_search',
+    title: 'Szybki Poszukiwacz',
+    description: 'Opanowano wyszukiwanie zagubionych dokumentów w Eksploratorze Windows.',
+    icon: '🔎',
+    requirement: 'Ukończenie Misji 16'
+  },
+  {
     id: 'badge_master',
     title: 'Certyfikowany Administrator',
     description: 'Ukończono wszystkie praktyczne wyzwania z Windows i Linux.',
     icon: '🏆',
-    requirement: 'Ukończenie wszystkich 13 misji'
+    requirement: 'Ukończenie wszystkich 16 misji'
   }
 ];
 
@@ -641,5 +655,111 @@ export const MISSIONS: Mission[] = [
       };
     },
     successMessage: 'Genialnie! Opanowałeś sprawne posługiwanie się schowkiem systemowym do przenoszenia wielu plików. Wytnij i Wklej pozwala przenosić pliki bez pozostawiania kopii w starym miejscu, oszczędzając czas i zachowując idealny porządek!'
+  },
+  {
+    id: 'm15_linux_grep',
+    title: 'Misja 15: Przeszukiwanie plików tekstowych (grep)',
+    description: 'Naucz się przeszukiwać wnętrza plików tekstowych za pomocą potężnej komendy grep w systemie Linux.',
+    instructions: [
+      'Wejdź do katalogu Documents wpisując „cd Documents”.',
+      'Użyj polecenia „grep haslo raport.txt”, aby znaleźć linie zawierające słowo kluczowe.',
+      'Zobacz odnalezione hasło wyróżnione na czerwono w terminalu!'
+    ],
+    category: 'linux',
+    difficulty: 'Średni',
+    points: 45,
+    initialState: {
+      system: 'linux',
+      currentPathId: 'uczen',
+      nodes: {
+        ...createDefaultLinuxVFS(),
+        'raport_txt': {
+          id: 'raport_txt',
+          name: 'raport.txt',
+          type: 'file',
+          parentId: 'documents',
+          content: 'Raport bezpieczeństwa systemowego.\nBrak problemów w systemie.\nUruchomiono moduł szyfrujący.\nZapisano nowe tajne haslo: admin123\nKoniec raportu.',
+          createdAt: '2026-07-15 10:15',
+          size: '120 B'
+        }
+      }
+    },
+    checkCompleted: (nodes, currentPathId, commandHistory) => {
+      const history = commandHistory || [];
+      const hasGrep = history.some(cmd => {
+        const norm = cmd.toLowerCase().trim().replace(/\s+/g, ' ');
+        return norm.startsWith('grep ') && (norm.includes('haslo') || norm.includes('hasło')) && norm.includes('raport.txt');
+      });
+      if (hasGrep) {
+        return {
+          completed: true,
+          progressText: 'Super! Znalazłeś tajne hasło przy użyciu komendy grep.'
+        };
+      }
+      return {
+        completed: false,
+        progressText: 'Wejdź do Documents (cd Documents) i użyj komendy: grep haslo raport.txt'
+      };
+    },
+    successMessage: 'Niezwykłe! Komenda grep to jedno z najważniejszych narzędzi w systemach Linux. Pozwala błyskawicznie przeszukać tysiące linii kodu i logów w poszukiwaniu konkretnej informacji, bez konieczności ręcznego otwierania każdego pliku!'
+  },
+  {
+    id: 'm16_win_search',
+    title: 'Misja 16: Szukaj i znajdź w Windows',
+    description: 'Wykorzystaj wbudowaną wyszukiwarkę w Eksploratorze Windows, aby błyskawicznie namierzyć zgubiony plik projektu szkolnego.',
+    instructions: [
+      'Kliknij na pole wyszukiwania „Szukaj...” w prawym górnym rogu Eksploratora Windows.',
+      'Wpisz słowo „projekt”, aby uruchomić dynamiczne wyszukiwanie.',
+      'Kliknij lewym przyciskiem myszy na znaleziony plik „projekt_semestralny.docx”, aby go zaznaczyć.'
+    ],
+    category: 'windows',
+    difficulty: 'Średni',
+    points: 45,
+    initialState: {
+      system: 'windows',
+      currentPathId: 'root',
+      nodes: {
+        ...createDefaultWindowsVFS(),
+        'szkola_projekt_folder': {
+          id: 'szkola_projekt_folder',
+          name: 'Archiwum_2025',
+          type: 'directory',
+          parentId: 'szkola_folder',
+          createdAt: '2026-07-15 10:16',
+          size: 'Folder'
+        },
+        'projekt_semestralny_docx': {
+          id: 'projekt_semestralny_docx',
+          name: 'projekt_semestralny.docx',
+          type: 'file',
+          parentId: 'szkola_projekt_folder',
+          content: '[Dokument MS Word] Projekt semestralny na temat systemów operacyjnych. Ocena: celujący!',
+          createdAt: '2026-07-15 10:20',
+          size: '28 KB'
+        }
+      }
+    },
+    checkCompleted: (nodes, currentPathId, commandHistory) => {
+      const history = commandHistory || [];
+      const hasSearched = history.some(action => action.startsWith('search:') && action.includes('projekt'));
+      const hasSelected = history.some(action => action === 'select:projekt_semestralny_docx');
+      
+      if (hasSearched && hasSelected) {
+        return {
+          completed: true,
+          progressText: 'Świetnie! Wyszukałeś słowo "projekt" i zaznaczyłeś plik projekt_semestralny.docx.'
+        };
+      } else if (hasSearched) {
+        return {
+          completed: false,
+          progressText: 'Dobrze! Wpisałeś frazę w wyszukiwarkę. Teraz kliknij lewym przyciskiem myszy na znaleziony plik "projekt_semestralny.docx", aby go zaznaczyć.'
+        };
+      }
+      return {
+        completed: false,
+        progressText: 'Wpisz "projekt" w wyszukiwarkę (u góry po prawej stronie), aby znaleźć plik "projekt_semestralny.docx".'
+      };
+    },
+    successMessage: 'Wspaniale! Funkcja wyszukiwania w systemach operacyjnych to potężny sprzymierzeniec. Kiedy masz do czynienia z głębokimi strukturami katalogów, wbudowana wyszukiwarka oszczędza mnóstwo czasu, indeksując nazwy oraz zawartość plików dla błyskawicznych rezultatów!'
   }
 ];
