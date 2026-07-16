@@ -19,7 +19,9 @@ import {
   ChevronDown,
   X,
   Printer,
-  ShieldAlert
+  ShieldAlert,
+  Download,
+  Laptop
 } from 'lucide-react';
 
 import { VFSNode, Mission } from './types';
@@ -92,6 +94,58 @@ export default function App() {
 
   // Footer Legal Modal State ('none' | 'regulamin' | 'licencja')
   const [footerModal, setFooterModal] = useState<'none' | 'regulamin' | 'licencja'>('none');
+
+  // PWA Installation States
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstallable, setIsInstallable] = useState<boolean>(false);
+  const [isInstalled, setIsInstalled] = useState<boolean>(false);
+  const [pwaModalOpen, setPwaModalOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+
+    const handleAppInstalled = () => {
+      setIsInstalled(true);
+      setIsInstallable(false);
+      setDeferredPrompt(null);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    // Check if app is already running in standalone (PWA) mode
+    if (window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone) {
+      setIsInstalled(true);
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallPWA = async () => {
+    if (!deferredPrompt) {
+      setPwaModalOpen(true);
+      return;
+    }
+    try {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setIsInstalled(true);
+        setIsInstallable(false);
+      }
+      setDeferredPrompt(null);
+    } catch (err) {
+      console.error('Error triggering PWA install:', err);
+      setPwaModalOpen(true);
+    }
+  };
 
   // Educational helpful tips from Plikuś (in Polish)
   const assistantTips = [
@@ -378,26 +432,44 @@ export default function App() {
             </div>
           </div>
 
-          {/* Profile Level Rank Status Bar */}
-          <div className="flex items-center gap-4 bg-white/50 border border-white/80 p-2.5 sm:p-3 rounded-2xl max-w-sm w-full sm:w-auto">
-            <div className="bg-white p-1.5 rounded-xl border border-gray-100/50 shadow-inner hidden sm:block">
-              <User className="w-5 h-5 text-[#5E81AC]" />
-            </div>
-            <div className="text-left select-none flex-grow">
-              <div className="flex items-center justify-between gap-3">
-                <span className={`text-[10px] md:text-xs font-black uppercase tracking-wider text-[#5E81AC]`}>
-                  Level {currentRank.level}: {currentRank.title}
-                </span>
-                <span className="text-[10px] md:text-xs font-mono font-bold text-[#4C566A]">
-                  {totalPoints} / {currentRank.nextXp} XP
-                </span>
+          {/* Right Section: PWA Install + Profile Rank */}
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+            {/* PWA Installation Button */}
+            <button
+              onClick={handleInstallPWA}
+              className={`px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shadow-xs border cursor-pointer w-full sm:w-auto justify-center ${
+                isInstalled 
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                  : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100'
+              }`}
+              id="pwa-install-header-btn"
+              title="Kliknij, aby dowiedzieć się jak zainstalować program na komputerze lub telefonie"
+            >
+              <Download className="w-4 h-4" />
+              <span>{isInstalled ? 'Zainstalowano ✓' : 'Zainstaluj (PWA)'}</span>
+            </button>
+
+            {/* Profile Level Rank Status Bar */}
+            <div className="flex items-center gap-4 bg-white/50 border border-white/80 p-2.5 sm:p-3 rounded-2xl w-full sm:w-auto">
+              <div className="bg-white p-1.5 rounded-xl border border-gray-100/50 shadow-inner hidden sm:block">
+                <User className="w-5 h-5 text-[#5E81AC]" />
               </div>
-              {/* Level Progress Bar */}
-              <div className="w-full sm:w-36 bg-[#D8DEE9] h-2.5 rounded-full overflow-hidden mt-1.5 border border-white/40">
-                <div 
-                  className="h-full bg-[#88C0D0] transition-all duration-500"
-                  style={{ width: `${xpPercent}%` }}
-                />
+              <div className="text-left select-none flex-grow">
+                <div className="flex items-center justify-between gap-3">
+                  <span className={`text-[10px] md:text-xs font-black uppercase tracking-wider text-[#5E81AC]`}>
+                    Level {currentRank.level}: {currentRank.title}
+                  </span>
+                  <span className="text-[10px] md:text-xs font-mono font-bold text-[#4C566A]">
+                    {totalPoints} / {currentRank.nextXp} XP
+                  </span>
+                </div>
+                {/* Level Progress Bar */}
+                <div className="w-full sm:w-36 bg-[#D8DEE9] h-2.5 rounded-full overflow-hidden mt-1.5 border border-white/40">
+                  <div 
+                    className="h-full bg-[#88C0D0] transition-all duration-500"
+                    style={{ width: `${xpPercent}%` }}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -1092,6 +1164,144 @@ export default function App() {
             >
               Świetnie, lećmy dalej!
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* PWA INSTALLATION DETAILED EDUCATIONAL MODAL */}
+      {pwaModalOpen && (
+        <div className="fixed inset-0 bg-[#2E3440]/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 select-none animate-fadeIn">
+          <div className="bg-[#F8FAFC] rounded-3xl max-w-2xl w-full max-h-[90vh] shadow-2xl border border-white flex flex-col overflow-hidden text-[#2E3440]">
+            
+            {/* Header */}
+            <div className="bg-[#ECEFF4] border-b border-[#D8DEE9] px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">💻</span>
+                <h3 className="text-lg font-bold text-[#2E3440]">Instalacja Aplikacji Offline (PWA)</h3>
+              </div>
+              <button
+                onClick={() => setPwaModalOpen(false)}
+                className="text-gray-500 hover:text-gray-800 font-bold p-1 hover:bg-white/80 rounded-lg transition-all"
+                title="Zamknij"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Body */}
+            <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 text-sm leading-relaxed text-[#4C566A]">
+              
+              {/* Alert explaining Iframe limits */}
+              <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl text-amber-900 space-y-2">
+                <div className="flex items-center gap-2 font-bold text-sm">
+                  <span>⚠️</span>
+                  <span>Ważna informacja o bezpieczeństwie przeglądarki:</span>
+                </div>
+                <p className="text-xs leading-relaxed text-amber-800">
+                  Przeglądarki internetowe (np. Chrome, Edge, Safari) ze względów bezpieczeństwa <strong>blokują automatyczną instalację PWA</strong>, gdy strona jest uruchomiona <strong>wewnątrz ramki (iframe)</strong> w panelu podglądu lub edytorze kodu.
+                </p>
+                <p className="text-xs font-semibold leading-relaxed text-amber-900">
+                  Aby bez problemu zainstalować program na komputerze lub telefonie jako osobną aplikację, kliknij poniższy przycisk, aby otworzyć go bezpośrednio, a następnie skorzystaj z opcji instalacji!
+                </p>
+                
+                <div className="pt-2">
+                  <a
+                    href={window.location.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs transition-colors shadow-xs"
+                  >
+                    <span>🚀</span> Otwórz w nowej karcie
+                  </a>
+                </div>
+              </div>
+
+              {/* Status Section */}
+              <div className="bg-white border border-[#D8DEE9] rounded-2xl p-4 space-y-3">
+                <h4 className="font-bold text-[#2E3440] text-xs uppercase tracking-wider text-[#5E81AC]">Status Aplikacji na Twoim urządzeniu:</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className="flex items-center gap-2 bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+                    <span className="text-lg">📦</span>
+                    <div>
+                      <p className="font-semibold text-gray-500">Service Worker:</p>
+                      <p className="text-emerald-600 font-bold">Zarejestrowany (Działa offline) ✓</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+                    <span className="text-lg">⚙️</span>
+                    <div>
+                      <p className="font-semibold text-gray-500">Stan instalacji:</p>
+                      <p className={isInstalled ? "text-emerald-600 font-bold" : "text-amber-600 font-bold"}>
+                        {isInstalled ? "Zainstalowano jako aplikację ✓" : "Gotowa do instalacji"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Interactive Installation Guide */}
+              <div className="space-y-4">
+                <h4 className="font-bold text-sm text-[#2E3440]">Jak zainstalować ręcznie w 3 sekundy?</h4>
+                
+                <div className="space-y-4 text-xs">
+                  {/* Option 1: Chrome / Edge Desktop */}
+                  <div className="border-l-4 border-[#5E81AC] pl-4 space-y-1">
+                    <p className="font-bold text-[#2E3440] flex items-center gap-1.5 text-xs sm:text-sm">
+                      <span>🖥️</span> Na komputerze (Chrome, Edge, Opera)
+                    </p>
+                    <p className="text-gray-600">
+                      Spójrz na pasek adresu URL na samej górze przeglądarki. Po prawej stronie paska (tuż obok gwiazdki do zakładek) zobaczysz ikonę <strong>„Instaluj aplikację”</strong> (mały monitor ze strzałką w dół). Kliknij ją i zatwierdź!
+                    </p>
+                    <p className="text-gray-500 italic">
+                      Alternatywnie: kliknij menu z trzema kropkami <strong className="text-gray-700">⁝</strong> w prawym górnym rogu przeglądarki i wybierz <strong>„Zapisz i zainstaluj” → „Zainstaluj aplikację...”</strong>.
+                    </p>
+                  </div>
+
+                  {/* Option 2: Android Chrome */}
+                  <div className="border-l-4 border-[#A3BE8C] pl-4 space-y-1">
+                    <p className="font-bold text-[#2E3440] flex items-center gap-1.5 text-xs sm:text-sm">
+                      <span>🤖</span> Na telefonie Android (Chrome)
+                    </p>
+                    <p className="text-gray-600">
+                      Kliknij ikonkę trzech kropek <strong className="text-gray-700">⁝</strong> w prawym górnym rogu Chrome, a następnie wybierz pozycję <strong>„Dodaj do ekranu głównego”</strong> lub <strong>„Zainstaluj aplikację”</strong>.
+                    </p>
+                  </div>
+
+                  {/* Option 3: iOS Safari (iPhone / iPad) */}
+                  <div className="border-l-4 border-[#B48EAD] pl-4 space-y-1">
+                    <p className="font-bold text-[#2E3440] flex items-center gap-1.5 text-xs sm:text-sm">
+                      <span>🍏</span> Na telefonie iPhone i iPadzie (Safari)
+                    </p>
+                    <p className="text-gray-600">
+                      W dolnym menu Safari kliknij ikonkę <strong>Udostępnij</strong> (kwadrat z wychodzącą strzałką w górę), przewiń menu w dół i wybierz pozycję <strong>„Dodaj do ekranu początkowego”</strong>.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Offline mode benefits */}
+              <div className="bg-[#ECEFF4] p-4 rounded-2xl text-xs space-y-1">
+                <p className="font-bold text-[#2E3440]">Co zyskujesz instalując program?</p>
+                <ul className="list-disc pl-5 text-gray-600 space-y-1">
+                  <li><strong>Pełne działanie offline:</strong> Możesz uczyć się i grać bez połączenia z internetem na lekcji informatyki.</li>
+                  <li><strong>Szybkie uruchamianie:</strong> Własna ikona na pulpicie komputera lub ekranie głównym telefonu.</li>
+                  <li><strong>Więcej miejsca na naukę:</strong> Brak pasków przeglądarki oznacza większy i czytelniejszy ekran symulatora!</li>
+                </ul>
+              </div>
+
+            </div>
+
+            {/* Footer */}
+            <div className="bg-[#ECEFF4] border-t border-[#D8DEE9] px-6 py-4 flex justify-between items-center">
+              <span className="text-[10px] font-bold text-gray-500 uppercase">PWA Akademia SO 1.0.0</span>
+              <button
+                onClick={() => setPwaModalOpen(false)}
+                className="px-5 py-2 bg-[#5E81AC] hover:bg-[#81A1C1] text-white font-bold rounded-xl text-xs transition-colors shadow-sm cursor-pointer"
+              >
+                Rozumiem
+              </button>
+            </div>
+
           </div>
         </div>
       )}
