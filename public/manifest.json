@@ -1,0 +1,25 @@
+{
+  "name": "Akademia Systemów Operacyjnych",
+  "short_name": "Akademia SO",
+  "description": "Interaktywny symulator systemów plików Windows 11 i Linux Ubuntu dla uczniów",
+  "start_url": ".",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F8FAFC",
+  "theme_color": "#5E81AC",
+  "icons": [
+    {
+      "src": "icon-512.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
