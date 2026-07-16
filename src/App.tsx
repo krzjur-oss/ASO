@@ -21,7 +21,9 @@ import {
   Printer,
   ShieldAlert,
   Download,
-  Laptop
+  Laptop,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 
 import { VFSNode, Mission } from './types';
@@ -144,6 +146,31 @@ export default function App() {
     } catch (err) {
       console.error('Error triggering PWA install:', err);
       setPwaModalOpen(true);
+    }
+  };
+
+  // Fullscreen State and Functions
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const handleToggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (err) {
+      console.error('Błąd przełączania trybu pełnoekranowego:', err);
     }
   };
 
@@ -447,6 +474,17 @@ export default function App() {
             >
               <Download className="w-4 h-4" />
               <span>{isInstalled ? 'Zainstalowano ✓' : 'Zainstaluj (PWA)'}</span>
+            </button>
+
+            {/* Fullscreen Toggle Button */}
+            <button
+              onClick={handleToggleFullscreen}
+              className="px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shadow-xs border cursor-pointer w-full sm:w-auto justify-center bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
+              id="fullscreen-toggle-btn"
+              title={isFullscreen ? 'Wyjdź z trybu pełnoekranowego' : 'Włącz tryb pełnoekranowy (pełny ekran)'}
+            >
+              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              <span>{isFullscreen ? 'Tryb okienkowy' : 'Pełny ekran'}</span>
             </button>
 
             {/* Profile Level Rank Status Bar */}
