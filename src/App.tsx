@@ -90,6 +90,9 @@ export default function App() {
   // Completed Celebration Modal State
   const [celebrationMission, setCelebrationMission] = useState<Mission | null>(null);
 
+  // Footer Legal Modal State ('none' | 'regulamin' | 'licencja')
+  const [footerModal, setFooterModal] = useState<'none' | 'regulamin' | 'licencja'>('none');
+
   // Educational helpful tips from Plikuś (in Polish)
   const assistantTips = [
     "Cześć! Jestem Plikuś, Twój pomocnik. Czy wiesz, że słowa 'folder' oraz 'katalog' to dokładnie to samo?",
@@ -110,17 +113,9 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Auto-speak tip when assistant is open or tip changes
+  // Stop speaking when assistant is closed or tip changes
   useEffect(() => {
-    if (assistantOpen) {
-      // Delay slightly to allow the transition to finish or UI to settle
-      const timer = setTimeout(() => {
-        speakText(assistantTips[assistantTipIdx]);
-      }, 100);
-      return () => clearTimeout(timer);
-    } else {
-      stopSpeaking();
-    }
+    stopSpeaking();
   }, [assistantOpen, assistantTipIdx]);
 
   // Challenge Mode Countdown Timer
@@ -549,6 +544,7 @@ export default function App() {
                 onActionTriggered={handleVerifyActiveMission}
                 isChallengeActive={challengeActive}
                 challengeTimeLeft={challengeTimeLeft}
+                activeMissionId={activeMissionId}
               />
             </div>
           )}
@@ -572,6 +568,7 @@ export default function App() {
                 onActionTriggered={handleVerifyActiveMission}
                 isChallengeActive={challengeActive}
                 challengeTimeLeft={challengeTimeLeft}
+                activeMissionId={activeMissionId}
               />
             </div>
           )}
@@ -714,18 +711,293 @@ export default function App() {
       </main>
 
       {/* FOOTER */}
-      <footer className="bg-transparent py-6 text-center text-xs text-[#4C566A] select-none no-print" id="app-footer">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© 2026 Akademia Systemów Operacyjnych. Stworzone do celów edukacyjnych dla szkół podstawowych.</p>
+      <footer className="bg-white/60 border-t border-gray-200/80 mt-12 py-8 text-xs text-[#4C566A] no-print" id="app-footer">
+        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 select-none">
+          
+          {/* Column 1: O programie */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-[#2E3440] font-bold text-sm">
+              <span className="text-lg">💻</span>
+              <span>O programie</span>
+            </div>
+            <p className="leading-relaxed text-gray-600">
+              <strong>Akademia Systemów Operacyjnych</strong> to interaktywny symulator systemów plików Windows 11 oraz Linux Ubuntu, stworzony specjalnie dla uczniów szkoły podstawowej. Pomaga opanować zarządzanie plikami, tworzenie folderów, czytanie ścieżek dostępu oraz pisanie poleceń w terminalu poprzez angażujące grywalizacyjne misje.
+            </p>
+          </div>
+
+          {/* Column 2: O autorze */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-[#2E3440] font-bold text-sm">
+              <span className="text-lg">👨‍🏫</span>
+              <span>Autor programu</span>
+            </div>
+            <div className="leading-relaxed text-gray-600 space-y-1">
+              <p className="font-semibold text-[#2E3440]">mgr Krzysztof Jureczek</p>
+              <p>Nauczyciel i promotor nowoczesnych metod nauczania informatyki w szkołach.</p>
+              <p className="pt-1 flex items-center gap-1">
+                <span>📧</span> 
+                <a href="mailto:KrzJur@gmail.com" className="text-[#5E81AC] hover:underline">KrzJur@gmail.com</a>
+              </p>
+              <p className="flex items-center gap-1">
+                <span>🐙</span> 
+                <a href="https://github.com/krzjur-oss" target="_blank" rel="noopener noreferrer" className="text-[#5E81AC] hover:underline">github.com/krzjur-oss</a>
+              </p>
+            </div>
+          </div>
+
+          {/* Column 3: Regulamin i Licencja */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-[#2E3440] font-bold text-sm">
+              <span className="text-lg">📄</span>
+              <span>Zasady i Licencja</span>
+            </div>
+            <p className="leading-relaxed text-gray-600 mb-2">
+              Aplikacja jest dystrybuowana bezpłatnie do użytku domowego oraz edukacyjnego na warunkach autorskiej licencji WLDE.
+            </p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <button
+                onClick={() => setFooterModal('regulamin')}
+                className="px-3.5 py-2 bg-white hover:bg-gray-100 text-[#2E3440] font-bold rounded-xl border border-gray-200 transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
+                id="footer-btn-regulamin"
+              >
+                <span>📜</span> Regulamin i RODO
+              </button>
+              <button
+                onClick={() => setFooterModal('licencja')}
+                className="px-3.5 py-2 bg-white hover:bg-gray-100 text-[#2E3440] font-bold rounded-xl border border-gray-200 transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
+                id="footer-btn-licencja"
+              >
+                <span>⚖️</span> Licencja WLDE
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <div className="max-w-7xl mx-auto px-6 mt-8 pt-6 border-t border-gray-200/50 flex flex-col sm:flex-row items-center justify-between gap-4 select-none">
+          <p>© 2026 Krzysztof Jureczek. Wszystkie prawa zastrzeżone. Stworzone z myślą o edukacji dzieci.</p>
           <button 
             onClick={handleResetAllProgress}
-            className="text-[10px] font-semibold text-rose-500 hover:text-rose-700 hover:underline bg-white/60 px-2.5 py-1 rounded-xl border border-white transition-all shadow-xs"
+            className="text-[10px] font-semibold text-rose-500 hover:text-rose-700 hover:underline bg-white/60 px-3 py-1.5 rounded-xl border border-white transition-all shadow-xs cursor-pointer"
             id="global-reset-progress-btn"
           >
             Zresetuj dane nauki
           </button>
         </div>
       </footer>
+
+      {/* REGULAMIN MODAL POPUP */}
+      {footerModal === 'regulamin' && (
+        <div className="fixed inset-0 bg-[#2E3440]/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 select-none animate-fadeIn">
+          <div className="bg-[#F8FAFC] rounded-3xl max-w-3xl w-full max-h-[85vh] shadow-2xl border border-white flex flex-col overflow-hidden text-[#2E3440]">
+            
+            {/* Modal Header */}
+            <div className="bg-[#ECEFF4] border-b border-[#D8DEE9] px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📜</span>
+                <h3 className="text-lg font-bold text-[#2E3440]">Regulamin i Polityka Prywatności</h3>
+              </div>
+              <button
+                onClick={() => setFooterModal('none')}
+                className="text-gray-500 hover:text-gray-800 font-bold p-1 hover:bg-white/80 rounded-lg transition-all"
+                title="Zamknij"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Scrollable Body */}
+            <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 text-sm leading-relaxed text-[#4C566A]">
+              <div>
+                <h4 className="text-base font-extrabold text-[#2E3440] mb-1">Regulamin i Polityka Prywatności aplikacji „Akademia Systemów Operacyjnych”</h4>
+                <p className="text-xs text-gray-500 font-semibold">Wersja 1.0.0 · obowiązuje od 16 lipca 2026 r.</p>
+              </div>
+
+              <div className="border-t border-[#D8DEE9] pt-4 space-y-4">
+                <div>
+                  <h5 className="font-bold text-[#2E3440] mb-1">§ 1. Postanowienia ogólne</h5>
+                  <ul className="list-decimal pl-5 space-y-1">
+                    <li>Niniejszy Regulamin określa zasady korzystania z aplikacji <strong>„Akademia Systemów Operacyjnych”</strong> (dalej: „Aplikacja”).</li>
+                    <li>Właścicielem, twórcą i jedynym autorem Aplikacji jest <strong>mgr Krzysztof Jureczek</strong> (dalej: „Autor”).</li>
+                    <li>Aplikacja dystrybuowana jest na warunkach <strong>Wolnej Licencji Domowo-Edukacyjnej (Zastrzeżonej)</strong> — pełna treść dostępna w Licencji WLDE. Regulamin i Licencja stanowią spójną całość.</li>
+                    <li>Korzystanie z Aplikacji oznacza pełną akceptację niniejszego Regulaminu oraz Licencji.</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h5 className="font-bold text-[#2E3440] mb-1">§ 2. Przeznaczenie Aplikacji</h5>
+                  <p>Aplikacja przeznaczona jest wyłącznie do:</p>
+                  <ul className="list-decimal pl-5 space-y-1">
+                    <li><strong>Użytku domowego / prywatnego</strong> — korzystanie przez osoby fizyczne w celach własnych, w tym rozrywkowych i samokształceniowych.</li>
+                    <li><strong>Użytku edukacyjnego</strong> — wykorzystanie w placówkach oświatowych (przedszkola, szkoły, uczelnie, świetlice, placówki opiekuńczo-wychowawcze i terapeutyczne) w ramach zajęć dydaktycznych.</li>
+                  </ul>
+                  <p className="mt-2 text-xs text-amber-600 font-semibold italic">Wszelkie inne zastosowania, w tym komercyjne, wymagają uprzedniej pisemnej zgody Autora.</p>
+                </div>
+
+                <div>
+                  <h5 className="font-bold text-[#2E3440] mb-1">§ 3. Zasady korzystania</h5>
+                  <ul className="list-decimal pl-5 space-y-1">
+                    <li>Aplikacja jest całkowicie bezpłatna dla celów prywatnych i edukacyjnych.</li>
+                    <li>Aplikacja nie zawiera reklam, mikropłatności ani płatnych subskrypcji.</li>
+                    <li>Użytkownik zobowiązuje się korzystać z Aplikacji zgodnie z jej przeznaczeniem oraz obowiązującym prawem.</li>
+                    <li>Zabronione jest podejmowanie działań mogących zakłócić działanie Aplikacji lub narazić innych użytkowników na szkodę.</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h5 className="font-bold text-[#2E3440] mb-1">§ 4. Prawa autorskie i licencja</h5>
+                  <p>Wszelkie prawa do Aplikacji — w tym kod źródłowy, interfejs graficzny, projekt wizualny, treści edukacyjne i dokumentacja — należą wyłącznie do Autora i są chronione prawem autorskim.</p>
+                  <div className="bg-white border border-[#D8DEE9] rounded-xl p-3.5 mt-2 text-xs space-y-1">
+                    <p className="text-red-500 font-semibold">❌ Zabronione:</p>
+                    <p className="text-gray-600 pl-4">Kopiowanie, modyfikowanie, dekompilowanie, rozpowszechnianie, sprzedaż lub komercjalizacja Aplikacji bądź jej części bez pisemnej zgody Autora.</p>
+                    <p className="text-emerald-600 font-semibold pt-1">✅ Dozwolone:</p>
+                    <p className="text-gray-600 pl-4">Korzystanie z Aplikacji zgodnie z jej przeznaczeniem domowo-edukacyjnym oraz swobodne udostępnianie adresu internetowego do Aplikacji innym osobom.</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h5 className="font-bold text-[#2E3440] mb-1">§ 5. Dane i prywatność (RODO / GDPR)</h5>
+                  <ul className="list-decimal pl-5 space-y-1">
+                    <li>Aplikacja <strong>nie wymaga rejestracji ani logowania</strong> i nie zbiera żadnych danych osobowych na zewnętrznych serwerach.</li>
+                    <li>Wszelkie dane wprowadzane do Aplikacji (np. imię ucznia na certyfikacie, zdobyte punkty XP, stan ukończenia misji i quizu) przechowywane są <strong>wyłącznie lokalnie w pamięci przeglądarki użytkownika (localStorage)</strong> i nigdy nie są wysyłane do sieci.</li>
+                    <li>Administratorem danych wprowadzanych lokalnie (jeśli dotyczy) jest wyłącznie Użytkownik końcowy (np. szkoła, nauczyciel lub uczeń) — Autor nie ma technicznej możliwości dostępu do tych danych.</li>
+                    <li>Aplikacja nie używa marketingowych ani śledzących plików cookie ani zewnętrznych systemów profilowania.</li>
+                    <li>Użytkownik może w każdej chwili trwale usunąć swoje dane, czyszcząc historię przeglądarki lub klikając przycisk "Zresetuj dane nauki" w stopce.</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h5 className="font-bold text-[#2E3440] mb-1">§ 6. Odpowiedzialność</h5>
+                  <ul className="list-decimal pl-5 space-y-1">
+                    <li>Aplikacja udostępniana jest w stanie „takim, jakim jest” (<em>as is</em>), bez jakichkolwiek gwarancji poprawnego działania we wszystkich środowiskach.</li>
+                    <li>Autor nie ponosi odpowiedzialności za utratę danych (np. wskutek wyczyszczenia pamięci podręcznej przeglądarki), błędy działania, ani szkody wynikające z korzystania bądź niemożności korzystania z Aplikacji.</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h5 className="font-bold text-[#2E3440] mb-1">§ 7. Postanowienia końcowe</h5>
+                  <p>W sprawach nieuregulowanych niniejszym Regulaminem zastosowanie mają przepisy prawa polskiego, w szczególności Kodeksu cywilnego oraz ustawy o prawie autorskim i prawach pokrewnych. Wszelkie uwagi prosimy kierować na adres: <span className="font-semibold text-[#5E81AC]">KrzJur@gmail.com</span>.</p>
+                </div>
+              </div>
+
+              <div className="pt-4 text-center border-t border-[#D8DEE9]">
+                <p className="text-xs font-semibold text-[#2E3440]">© 2026 Krzysztof Jureczek · Wszelkie prawa zastrzeżone</p>
+              </div>
+            </div>
+
+            {/* Modal Footer Close button */}
+            <div className="bg-[#ECEFF4] border-t border-[#D8DEE9] px-6 py-4 flex justify-end">
+              <button
+                onClick={() => setFooterModal('none')}
+                className="px-5 py-2 bg-[#5E81AC] hover:bg-[#81A1C1] text-white font-bold rounded-xl text-xs transition-colors shadow-sm cursor-pointer"
+              >
+                Zamknij i zaakceptuj
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* LICENCJA MODAL POPUP */}
+      {footerModal === 'licencja' && (
+        <div className="fixed inset-0 bg-[#2E3440]/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 select-none animate-fadeIn">
+          <div className="bg-[#F8FAFC] rounded-3xl max-w-3xl w-full max-h-[85vh] shadow-2xl border border-white flex flex-col overflow-hidden text-[#2E3440]">
+            
+            {/* Modal Header */}
+            <div className="bg-[#ECEFF4] border-b border-[#D8DEE9] px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">⚖️</span>
+                <h3 className="text-lg font-bold text-[#2E3440]">Licencja Użytkowania (WLDE)</h3>
+              </div>
+              <button
+                onClick={() => setFooterModal('none')}
+                className="text-gray-500 hover:text-gray-800 font-bold p-1 hover:bg-white/80 rounded-lg transition-all"
+                title="Zamknij"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Scrollable Body */}
+            <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 text-sm leading-relaxed text-[#4C566A]">
+              <div>
+                <h4 className="text-base font-extrabold text-[#2E3440] mb-0.5">Wolna Licencja Domowo-Edukacyjna (Zastrzeżona) — WLDE</h4>
+                <p className="text-xs text-gray-500 font-bold uppercase tracking-wider text-[#5E81AC]">Projekt: Akademia Systemów Operacyjnych (wersja 1.0.0 i wyższe)</p>
+                <p className="text-xs text-gray-400 mt-1">Copyright © 2026 Krzysztof Jureczek. Wszelkie prawa zastrzeżone.</p>
+              </div>
+
+              <div className="border-t border-[#D8DEE9] pt-4 space-y-4">
+                <div className="bg-[#ECEFF4] p-4 rounded-2xl border border-[#D8DEE9] text-xs text-gray-600">
+                  <span className="font-bold text-[#2E3440] block mb-1">PREAMBUŁA</span>
+                  Niniejsza licencja ma na celu zabezpieczenie niekomercyjnego charakteru projektu <strong>„Akademia Systemów Operacyjnych”</strong>. Intenją Autora jest bezpłatne udostępnienie aplikacji do użytku domowego (prywatnego) oraz placówkom edukacyjnym, przy jednoczesnym pełnym zachowaniu praw autorskich, integralności kodu źródłowego oraz zakazie jakiejkolwiek komercjalizacji, kopiowania, modyfikacji i rozpowszechniania Oprogramowania bez pisemnej zgody Autora.
+                </div>
+
+                <div>
+                  <h5 className="font-bold text-[#2E3440] mb-1">§ 1. Definicje</h5>
+                  <ul className="list-decimal pl-5 space-y-1">
+                    <li><strong>Oprogramowanie</strong> – aplikacja „Akademia Systemów Operacyjnych” wraz z kodem źródłowym, grafiką, tekstami, zadaniami, dźwiękami oraz powiązaną dokumentacją.</li>
+                    <li><strong>Autor / Licencjodawca</strong> – mgr Krzysztof Jureczek, jedyny twórca i wyłączny dysponent autorskich praw majątkowych i osobistych do Oprogramowania.</li>
+                    <li><strong>Użytkownik / Licencjobiorca</strong> – każda osoba fizyczna korzystająca z Oprogramowania prywatnie, a także placówki oświatowo-wychowawcze (np. szkoły podstawowe, świetlice) korzystające z programu w celach dydaktycznych.</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h5 className="font-bold text-[#2E3440] mb-1">§ 2. Dozwolony użytek (Bezpłatny)</h5>
+                  <p>Autor udziela Użytkownikowi bezpłatnej, niewyłącznej, nieprzenoszalnej i ograniczonej licencji na korzystanie z Oprogramowania wyłącznie w następujących celach:</p>
+                  <ul className="list-decimal pl-5 space-y-1 mt-1">
+                    <li><strong>Użytek domowy / prywatny</strong> – instalowanie i uruchamianie Oprogramowania przez osoby fizyczne na własny, niekomercyjny użytek, w tym cele rozrywkowe i samokształceniowe.</li>
+                    <li><strong>Użytek edukacyjny</strong> – wykorzystanie Oprogramowania w placówkach oświatowych (przedszkola, szkoły podstawowe i ponadpodstawowe, uczelnie wyższe, świetlice, placówki opiekuńczo-wychowawcze i terapeutyczne) na zajęciach, lekcjach, wykładach i kołach zainteresowań.</li>
+                    <li><strong>Instalacja lokalna</strong> – uruchamianie i przechowywanie Oprogramowania (w tym w trybie offline/PWA, jeśli dotyczy) na urządzeniach własnych Użytkownika lub placówki.</li>
+                    <li><strong>Prezentacje niekomercyjne</strong> – publiczne demonstrowanie działania Oprogramowania w celach popularyzacji nauki i technologii, pod warunkiem wskazania autorstwa.</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h5 className="font-bold text-[#2E3440] mb-1">§ 3. Zakazy i ograniczenia</h5>
+                  <p className="font-semibold text-red-500 mb-1">Wszelkie działania wykraczające poza § 2 wymagają uprzedniej, pisemnej zgody Autora. W szczególności surowo zabrania się:</p>
+                  <ul className="list-decimal pl-5 space-y-1">
+                    <li><strong>Kopiowania kodu</strong> – kopiowania, powielania, pobierania w celu redystrybucji, dekompilacji lub inżynierii wstecznej kodu źródłowego lub skompilowanych plików Oprogramowania.</li>
+                    <li><strong>Modyfikacji</strong> – wprowadzania jakichkolwiek zmian w kodzie źródłowym, interfejsie, grafice, logotypach, treściach lub innych zasobach Oprogramowania.</li>
+                    <li><strong>Rozpowszechniania</strong> – dystrybuowania, udostępniania, sublicencjonowania, wynajmu, publikowania kopii lub „forków” Oprogramowania osobom trzecim, w tym poprzez publiczne repozytoria (GitHub, GitLab), sklepy z aplikacjami lub inne serwery.</li>
+                    <li><strong>Sprzedaży i komercjalizacji</strong> – sprzedaży, pobierania jakichkolwiek opłat za dostęp, instalację lub użytkowanie Oprogramowania, umieszczania go w płatnych pakietach, za bramkami płatniczymi, w serwisach z reklamami czerpiącymi zysk z ruchu użytkowników, ani wykorzystywania go do świadczenia odpłatnych usług.</li>
+                    <li><strong>Usuwania oznaczeń autorskich</strong> – usuwania, ukrywania lub modyfikowania informacji o Autorze, prawach autorskich, logotypach oraz odnośników do niniejszej licencji.</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h5 className="font-bold text-[#2E3440] mb-1">§ 4. Wyłączenie odpowiedzialności</h5>
+                  <ul className="list-decimal pl-5 space-y-1">
+                    <li>Oprogramowanie dostarczane jest w stanie, w jakim się znajduje („as is”), bez jakichkolwiek gwarancji, wyraźnych lub dorozumianych.</li>
+                    <li>Autor nie ponosi odpowiedzialności za jakiekolwiek szkody bezpośrednie, pośrednie lub następcze wynikłe z użytkowania lub niemożności użytkowania Oprogramowania, w tym za utratę postępów nauki.</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h5 className="font-bold text-[#2E3440] mb-1">§ 5. Rozwiązanie licencji</h5>
+                  <p>Naruszenie któregokolwiek z warunków niniejszej licencji skutkuje jej natychmiastowym i automatycznym wygaśnięciem. Użytkownik zobowiązany jest wówczas do zaprzestania korzystania z programu i trwałego usunięcia wszystkich kopii Oprogramowania ze swoich nośników.</p>
+                </div>
+              </div>
+
+              <div className="pt-4 text-center border-t border-[#D8DEE9]">
+                <p className="text-xs text-gray-500">Miejscowość i data sporządzenia: Kraków, lipiec 2026 r.</p>
+                <p className="text-xs font-semibold text-[#2E3440] mt-1">mgr Krzysztof Jureczek · github.com/krzjur-oss</p>
+              </div>
+            </div>
+
+            {/* Modal Footer Close button */}
+            <div className="bg-[#ECEFF4] border-t border-[#D8DEE9] px-6 py-4 flex justify-end">
+              <button
+                onClick={() => setFooterModal('none')}
+                className="px-5 py-2 bg-[#5E81AC] hover:bg-[#81A1C1] text-white font-bold rounded-xl text-xs transition-colors shadow-sm cursor-pointer"
+              >
+                Zamknij i zaakceptuj
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* FLOAT ASSISTANT "PLIKUŚ" RETRO DISK CHAR */}
       {assistantOpen ? (

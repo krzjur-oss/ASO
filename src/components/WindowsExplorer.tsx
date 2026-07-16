@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Folder, 
   FileText, 
@@ -12,6 +12,7 @@ import {
   FileCode,
   ArrowUp, 
   Search, 
+  Trash,
   Trash2, 
   Edit3, 
   ChevronRight,
@@ -24,7 +25,10 @@ import {
   Play,
   ArrowUpDown,
   Scissors,
-  Clipboard
+  Clipboard,
+  Network,
+  RotateCcw,
+  Info
 } from 'lucide-react';
 import { VFSNode } from '../types';
 import { 
@@ -39,6 +43,7 @@ import {
 import DirectoryTreeVisualizer from './DirectoryTreeVisualizer';
 import WindowsCMD from './WindowsCMD';
 import WindowsNotepad from './WindowsNotepad';
+import { Tooltip } from './Tooltip';
 
 interface WindowsExplorerProps {
   vfs: Record<string, VFSNode>;
@@ -94,6 +99,17 @@ export default function WindowsExplorer({
   const [sortBy, setSortBy] = useState<'name' | 'size' | 'date'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
+
+  // File Tree Panel visibility state
+  const [showFileTree, setShowFileTree] = useState(true);
+
+  // Context Menu and Properties modal States
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, nodeId: string } | null>(null);
+  const [propertiesNodeId, setPropertiesNodeId] = useState<string | null>(null);
+
+  // Drag and Drop States
+  const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
+  const [dragOverNodeId, setDragOverNodeId] = useState<string | null>(null);
 
   // Hints System for Windows
   const [showHint, setShowHint] = useState(false);
@@ -316,6 +332,41 @@ export default function WindowsExplorer({
     };
   }, [showHint, hintTarget]);
 
+  // Helper to calculate total elements and size within a directory
+  const getFolderContentsInfo = (dirId: string) => {
+    let fileCount = 0;
+    let folderCount = 0;
+    let totalBytes = 0;
+
+    const traverse = (id: string) => {
+      Object.values(vfs).forEach(node => {
+        if (node.parentId === id) {
+          if (node.type === 'directory') {
+            folderCount++;
+            traverse(node.id);
+          } else {
+            fileCount++;
+            if (node.size) {
+              const match = node.size.match(/^([\d.]+)\s*([a-zA-Z]+)$/);
+              if (match) {
+                const val = parseFloat(match[1]);
+                const unit = match[2].toUpperCase();
+                let multiplier = 1;
+                if (unit === 'KB') multiplier = 1024;
+                else if (unit === 'MB') multiplier = 1024 * 1024;
+                else if (unit === 'GB') multiplier = 1024 * 1024 * 1024;
+                totalBytes += val * multiplier;
+              }
+            }
+          }
+        }
+      });
+    };
+
+    traverse(dirId);
+    return { fileCount, folderCount, totalBytes };
+  };
+
   // Helper for rendering appropriate icons
   const getFileIcon = (node: VFSNode) => {
     if (node.type === 'directory') {
@@ -356,6 +407,9 @@ export default function WindowsExplorer({
 
   // Nav actions
   const handleFolderClick = (node: VFSNode) => {
+    if (node.parentId === 'kosz') {
+      return;
+    }
     if (node.type === 'directory') {
       setCurrentPathId(node.id);
       setSelectedNodeId(null);
@@ -379,6 +433,11 @@ export default function WindowsExplorer({
   };
 
   const handleGoUp = () => {
+    if (currentPathId === 'kosz') {
+      setCurrentPathId('root');
+      setSelectedNodeId(null);
+      return;
+    }
     const current = vfs[currentPathId];
     if (current && current.parentId) {
       setCurrentPathId(current.parentId);
@@ -461,6 +520,118 @@ export default function WindowsExplorer({
 
   // Delete Node
   const handleDeleteNode = (nodeId: string) => {
+    if (currentPathId === 'kosz') {
+      // Permanent deletion
+      setVfs(prev => {
+        const copy = { ...prev };
+        
+        const removeNodeAndChildren = (id: string) => {
+          delete copy[id];
+          Object.keys(copy).forEach(childId => {
+            if (copy[childId]?.parentId === id) {
+              removeNodeAndChildren(childId);
+            }
+          });
+        };
+        
+        removeNodeAndChildren(nodeId);
+        return copy;
+      });
+      setSelectedNodeId(null);
+      onAddXP(5);
+    } else {
+      // Move to Recycle Bin (Kosz)
+      setVfs(prev => {
+        const copy = { ...prev };
+        if (copy[nodeId]) {
+          copy[nodeId] = {
+            ...copy[nodeId],
+            originalParentId: copy[nodeId].parentId,
+            parentId: 'kosz'
+          };
+        }
+        return copy;
+      });
+      setSelectedNodeId(null);
+      onAddXP(10);
+    }
+    
+    setTimeout(() => {
+      onActionTriggered();
+    }, 50);
+  };
+
+  // Move Node (used for drag and drop)
+  const handleMoveNode = (nodeId: string, targetParentId: string) => {
+    if (!nodeId || !targetParentId) return;
+    if (nodeId === targetParentId) return;
+
+    const nodeToMove = vfs[nodeId];
+    if (!nodeToMove) return;
+
+    if (nodeToMove.parentId === targetParentId) return;
+
+    // If moving to Kosz, delete it
+    if (targetParentId === 'kosz') {
+      handleDeleteNode(nodeId);
+      return;
+    }
+
+    // Prevent moving a directory inside itself or its children
+    if (nodeToMove.type === 'directory') {
+      let tempParentId: string | null = targetParentId;
+      while (tempParentId) {
+        if (tempParentId === nodeToMove.id) {
+          alert('Błąd: Nie można przenieść folderu do samego siebie ani do jego podfolderów!');
+          return;
+        }
+        const parentNode = vfs[tempParentId];
+        tempParentId = parentNode ? parentNode.parentId : null;
+      }
+    }
+
+    setVfs(prev => ({
+      ...prev,
+      [nodeId]: {
+        ...prev[nodeId],
+        parentId: targetParentId
+      }
+    }));
+
+    setSelectedNodeId(null);
+    onAddXP(15);
+    
+    setTimeout(() => {
+      onActionTriggered();
+    }, 50);
+  };
+
+  // Restore Node from Recycle Bin (Kosz)
+  const handleRestoreNode = (nodeId: string) => {
+    setVfs(prev => {
+      const copy = { ...prev };
+      const node = copy[nodeId];
+      if (node) {
+        const targetParentId = node.originalParentId && copy[node.originalParentId]
+          ? node.originalParentId
+          : 'root';
+        copy[nodeId] = {
+          ...node,
+          parentId: targetParentId,
+          originalParentId: undefined
+        };
+      }
+      return copy;
+    });
+    setSelectedNodeId(null);
+    onAddXP(15);
+    setTimeout(() => {
+      onActionTriggered();
+    }, 50);
+  };
+
+  // Empty Recycle Bin (Kosz)
+  const handleEmptyTrash = () => {
     setVfs(prev => {
       const copy = { ...prev };
       
@@ -473,12 +644,16 @@ export default function WindowsExplorer({
         });
       };
       
-      removeNodeAndChildren(nodeId);
+      Object.keys(copy).forEach(id => {
+        if (copy[id]?.parentId === 'kosz') {
+          removeNodeAndChildren(id);
+        }
+      });
+      
       return copy;
     });
-    
     setSelectedNodeId(null);
-    onAddXP(10);
+    onAddXP(20);
     setTimeout(() => {
       onActionTriggered();
     }, 50);
@@ -560,12 +735,33 @@ export default function WindowsExplorer({
     }, 50);
   };
 
+  // Helper to check if a node or any ancestor is in the Recycle Bin (Kosz)
+  const isNodeInTrash = (nodeId: string): boolean => {
+    let current = vfs[nodeId];
+    while (current) {
+      if (current.parentId === 'kosz') return true;
+      if (current.parentId) {
+        current = vfs[current.parentId];
+      } else {
+        break;
+      }
+    }
+    return false;
+  };
+
   // Fetch active directory items or search results
   const rawChildren = searchQuery.trim() !== ''
-    ? Object.values(vfs).filter(node => 
-        node.parentId !== null && 
-        node.name.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+    ? Object.values(vfs).filter(node => {
+        const matchesSearch = node.parentId !== null && node.name.toLowerCase().includes(searchQuery.toLowerCase());
+        if (!matchesSearch) return false;
+        
+        const inTrash = isNodeInTrash(node.id);
+        if (currentPathId === 'kosz') {
+          return inTrash;
+        } else {
+          return !inTrash;
+        }
+      })
     : getChildren(vfs, currentPathId);
 
   // Helper to parse file size string for correct numerical sorting
@@ -600,7 +796,12 @@ export default function WindowsExplorer({
     return sortOrder === 'asc' ? comp : -comp;
   });
 
-  const pathNodes = getPathNodes(vfs, currentPathId);
+  const deletedFilesCount = Object.values(vfs).filter(node => node.parentId === 'kosz').length;
+  const isTrashEmpty = deletedFilesCount === 0;
+
+  const pathNodes = currentPathId === 'kosz' 
+    ? [{ id: 'kosz', name: 'Kosz', type: 'directory' as const, parentId: null, createdAt: '' }]
+    : getPathNodes(vfs, currentPathId);
 
   return (
     <div 
@@ -682,32 +883,62 @@ export default function WindowsExplorer({
             <div className="bg-[#ECEFF4] border-b border-[#D8DEE9] p-3 rounded-t-2xl flex flex-wrap items-center justify-between gap-3 select-none">
               {/* Navigation & Address Bar */}
               <div className="flex items-center gap-2 flex-grow min-w-0">
-                <button 
-                  onClick={handleGoUp}
-                  disabled={currentPathId === 'root'}
-                  className="p-1.5 hover:bg-white/60 rounded-xl text-[#2E3440] disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-                  title="W górę (Cofnij)"
-                  id="explorer-back-btn"
-                >
-                  <ArrowUp className="w-4 h-4" />
-                </button>
+                <Tooltip content="W górę (Cofnij do folderu wyżej)">
+                  <button 
+                    onClick={handleGoUp}
+                    disabled={currentPathId === 'root'}
+                    className="p-1.5 hover:bg-white/60 rounded-xl text-[#2E3440] disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                    title="W górę (Cofnij)"
+                    id="explorer-back-btn"
+                  >
+                    <ArrowUp className="w-4 h-4" />
+                  </button>
+                </Tooltip>
                 
                 {/* Breadcrumbs Address Bar */}
-                <div className="flex items-center gap-1 bg-white border border-[#D8DEE9] px-3 py-1.5 rounded-xl flex-grow min-w-0 text-xs text-[#2E3440] font-sans overflow-x-auto whitespace-nowrap shadow-2xs">
-                  <Monitor className="w-3.5 h-3.5 text-[#5E81AC] flex-shrink-0" />
-                  <span className="text-gray-400">Ten komputer</span>
-                  <ChevronRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                  {pathNodes.map((pNode, index) => (
-                    <React.Fragment key={pNode.id}>
-                      {index > 0 && <ChevronRight className="w-3 h-3 text-gray-400 flex-shrink-0" />}
-                      <button 
-                        onClick={() => handleFolderClick(pNode)}
-                        className="hover:text-[#5E81AC] hover:underline font-bold focus:outline-none"
-                      >
-                        {pNode.name === 'root' ? 'Dysk lokalny (C:)' : pNode.name}
-                      </button>
-                    </React.Fragment>
-                  ))}
+                <div className="flex items-center gap-1 bg-white border border-[#D8DEE9] px-3 py-1.5 rounded-xl flex-grow min-w-0 text-xs text-[#2E3440] font-sans overflow-x-auto whitespace-nowrap shadow-2xs" id="explorer-address-bar">
+                  <HardDrive className="w-3.5 h-3.5 text-[#5E81AC] flex-shrink-0" />
+                  {currentPathId === 'kosz' ? (
+                    <>
+                      <span className="text-gray-400 font-bold px-1 font-mono">\</span>
+                      <span className="text-gray-800 font-bold">Kosz</span>
+                    </>
+                  ) : (
+                    <>
+                      {pathNodes.map((pNode, index) => {
+                        const displayName = pNode.name === 'root' ? 'C:' : pNode.name;
+                        return (
+                          <React.Fragment key={pNode.id}>
+                            {index > 0 && <span className="text-gray-400 font-bold font-mono px-0.5">\</span>}
+                            <button 
+                              onClick={() => handleFolderClick(pNode)}
+                              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                              onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragOverNodeId(`breadcrumb-${pNode.id}`); }}
+                              onDragLeave={() => setDragOverNodeId(null)}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setDragOverNodeId(null);
+                                const droppedId = e.dataTransfer.getData('text/plain');
+                                if (droppedId) {
+                                  handleMoveNode(droppedId, pNode.id);
+                                }
+                              }}
+                              className={`hover:text-[#5E81AC] hover:underline font-bold focus:outline-none transition-all px-1 py-0.5 rounded ${
+                                dragOverNodeId === `breadcrumb-${pNode.id}` 
+                                  ? 'bg-blue-100 text-[#5E81AC] scale-105 border border-dashed border-blue-400 font-extrabold animate-pulse' 
+                                  : ''
+                              }`}
+                              title={`Przejdź do: ${displayName}`}
+                            >
+                              {displayName}
+                            </button>
+                          </React.Fragment>
+                        );
+                      })}
+                      {pathNodes.length === 1 && <span className="text-gray-400 font-bold font-mono px-0.5">\</span>}
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -739,34 +970,42 @@ export default function WindowsExplorer({
             {/* 2. Secondary Action Icons Bar (Windows 11 modern top bar) */}
             <div className="bg-[#F8FAFC] border-b border-[#D8DEE9] px-4 py-2 flex items-center justify-between text-xs text-[#2E3440] select-none">
               <div className="flex items-center gap-2 flex-wrap">
-                <button 
-                  onClick={() => { setIsNewFolderOpen(true); setErrorMsg(''); setNewItemName(''); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-white border border-transparent hover:border-[#D8DEE9] hover:text-[#5E81AC] rounded-lg transition-all shadow-2xs cursor-pointer"
-                  id="btn-create-folder"
-                >
-                  <FolderPlus className="w-4 h-4 text-amber-500" />
-                  <span className="font-semibold">Nowy Folder</span>
-                </button>
+                <Tooltip content="Stwórz nowy folder (nowe puste pudełko)">
+                  <button 
+                    onClick={() => { setIsNewFolderOpen(true); setErrorMsg(''); setNewItemName(''); }}
+                    disabled={currentPathId === 'kosz'}
+                    className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-white border border-transparent hover:border-[#D8DEE9] hover:text-[#5E81AC] rounded-lg transition-all shadow-2xs cursor-pointer disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent disabled:hover:text-[#4C566A]"
+                    id="btn-create-folder"
+                  >
+                    <FolderPlus className="w-4 h-4 text-amber-500" />
+                    <span className="font-semibold">Nowy Folder</span>
+                  </button>
+                </Tooltip>
                 
-                <button 
-                  onClick={() => { setIsNewFileOpen(true); setErrorMsg(''); setNewItemName(''); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-white border border-transparent hover:border-[#D8DEE9] hover:text-[#5E81AC] rounded-lg transition-all shadow-2xs cursor-pointer"
-                  id="btn-create-file"
-                >
-                  <FilePlus className="w-4 h-4 text-blue-500" />
-                  <span className="font-semibold">Nowy Plik</span>
-                </button>
+                <Tooltip content="Stwórz nowy plik tekstowy (nowy dokument)">
+                  <button 
+                    onClick={() => { setIsNewFileOpen(true); setErrorMsg(''); setNewItemName(''); }}
+                    disabled={currentPathId === 'kosz'}
+                    className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-white border border-transparent hover:border-[#D8DEE9] hover:text-[#5E81AC] rounded-lg transition-all shadow-2xs cursor-pointer disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent disabled:hover:text-[#4C566A]"
+                    id="btn-create-file"
+                  >
+                    <FilePlus className="w-4 h-4 text-blue-500" />
+                    <span className="font-semibold">Nowy Plik</span>
+                  </button>
+                </Tooltip>
 
                 {/* Sort Option Dropdown */}
                 <div className="relative">
-                  <button 
-                    onClick={() => setIsSortMenuOpen(!isSortMenuOpen)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-white border border-transparent hover:border-[#D8DEE9] hover:text-[#5E81AC] rounded-lg transition-all shadow-2xs cursor-pointer"
-                    id="btn-sort-files"
-                  >
-                    <ArrowUpDown className="w-4 h-4 text-indigo-500" />
-                    <span className="font-semibold">Sortuj ({sortBy === 'name' ? 'Nazwa' : sortBy === 'size' ? 'Rozmiar' : 'Data'})</span>
-                  </button>
+                  <Tooltip content="Sortuj (Zmień kolejność wyświetlania plików)">
+                    <button 
+                      onClick={() => setIsSortMenuOpen(!isSortMenuOpen)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-white border border-transparent hover:border-[#D8DEE9] hover:text-[#5E81AC] rounded-lg transition-all shadow-2xs cursor-pointer"
+                      id="btn-sort-files"
+                    >
+                      <ArrowUpDown className="w-4 h-4 text-indigo-500" />
+                      <span className="font-semibold">Sortuj ({sortBy === 'name' ? 'Nazwa' : sortBy === 'size' ? 'Rozmiar' : 'Data'})</span>
+                    </button>
+                  </Tooltip>
                   
                   {isSortMenuOpen && (
                     <div className="absolute left-0 mt-1.5 w-48 bg-white border border-[#D8DEE9] rounded-xl shadow-lg py-1.5 z-20 animate-fadeIn text-[#2E3440]">
@@ -848,75 +1087,153 @@ export default function WindowsExplorer({
                   )}
                 </div>
 
+                <Tooltip content="Drzewo plików (Pokaż lub ukryj boczny panel folderów)">
+                  <button 
+                    onClick={() => setShowFileTree(!showFileTree)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg transition-all shadow-2xs cursor-pointer ${
+                      showFileTree 
+                        ? 'bg-[#5E81AC]/10 border-[#5E81AC]/30 text-[#5E81AC] font-bold' 
+                        : 'hover:bg-white border-transparent hover:border-[#D8DEE9] hover:text-[#5E81AC]'
+                    }`}
+                    title="Pokaż / ukryj boczny panel z drzewem plików"
+                    id="btn-toggle-tree"
+                  >
+                    <Network className="w-4 h-4 text-[#5E81AC]" />
+                    <span className="font-semibold">Drzewo plików</span>
+                  </button>
+                </Tooltip>
+
                 <div className="h-4 w-px bg-[#D8DEE9] mx-1"></div>
 
-                <button 
-                  disabled={!selectedNodeId}
-                  onClick={() => {
-                    if (!selectedNodeId) return;
-                     setIsRenameOpen(true);
-                     setNewItemName(vfs[selectedNodeId]?.name || '');
-                     setErrorMsg('');
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-white border border-transparent hover:border-[#D8DEE9] hover:text-[#5E81AC] rounded-lg transition-all shadow-2xs disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent disabled:hover:text-[#4C566A] cursor-pointer"
-                  title="Zmień nazwę zaznaczonego elementu"
-                  id="btn-rename-file"
-                >
-                  <Edit3 className="w-4 h-4 text-[#4C566A]" />
-                  <span className="hidden sm:inline font-semibold">Zmień nazwę</span>
-                </button>
+                <Tooltip content="Zmień nazwę zaznaczonego pliku lub folderu">
+                  <button 
+                    disabled={!selectedNodeId || currentPathId === 'kosz'}
+                    onClick={() => {
+                      if (!selectedNodeId) return;
+                       setIsRenameOpen(true);
+                       setNewItemName(vfs[selectedNodeId]?.name || '');
+                       setErrorMsg('');
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-white border border-transparent hover:border-[#D8DEE9] hover:text-[#5E81AC] rounded-lg transition-all shadow-2xs disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent disabled:hover:text-[#4C566A] cursor-pointer"
+                    title="Zmień nazwę zaznaczonego elementu"
+                    id="btn-rename-file"
+                  >
+                    <Edit3 className="w-4 h-4 text-[#4C566A]" />
+                    <span className="hidden sm:inline font-semibold">Zmień nazwę</span>
+                  </button>
+                </Tooltip>
 
-                <button 
-                  disabled={!selectedNodeId}
-                  onClick={handleCut}
-                  className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-emerald-50 border border-transparent hover:border-emerald-200 hover:text-emerald-700 rounded-lg transition-all shadow-2xs disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent disabled:hover:text-[#4C566A] cursor-pointer"
-                  title="Wytnij (przygotuj plik do przeniesienia)"
-                  id="btn-cut-file"
-                >
-                  <Scissors className="w-4 h-4 text-emerald-500" />
-                  <span className="font-semibold">Wytnij</span>
-                  {clipboardNodeId && clipboardNodeId === selectedNodeId && (
-                    <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-ping"></span>
-                  )}
-                </button>
+                <Tooltip content="Wytnij zaznaczony plik (przygotuj do przeniesienia)">
+                  <button 
+                    disabled={!selectedNodeId || currentPathId === 'kosz'}
+                    onClick={handleCut}
+                    className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-emerald-50 border border-transparent hover:border-emerald-200 hover:text-emerald-700 rounded-lg transition-all shadow-2xs disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent disabled:hover:text-[#4C566A] cursor-pointer"
+                    title="Wytnij (przygotuj plik do przeniesienia)"
+                    id="btn-cut-file"
+                  >
+                    <Scissors className="w-4 h-4 text-emerald-500" />
+                    <span className="font-semibold">Wytnij</span>
+                    {clipboardNodeId && clipboardNodeId === selectedNodeId && (
+                      <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-ping"></span>
+                    )}
+                  </button>
+                </Tooltip>
 
-                <button 
-                  disabled={!clipboardNodeId}
-                  onClick={handlePaste}
-                  className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-emerald-50 border border-transparent hover:border-emerald-200 hover:text-emerald-700 rounded-lg transition-all shadow-2xs disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent disabled:hover:text-[#4C566A] cursor-pointer"
-                  title="Wklej plik w obecnym folderze"
-                  id="btn-paste-file"
-                >
-                  <Clipboard className="w-4 h-4 text-emerald-600" />
-                  <span className="font-semibold">Wklej</span>
-                  {clipboardNodeId && (
-                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce"></span>
-                  )}
-                </button>
+                <Tooltip content="Wklej wcześniej wycięty plik do obecnego folderu">
+                  <button 
+                    disabled={!clipboardNodeId || currentPathId === 'kosz'}
+                    onClick={handlePaste}
+                    className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-emerald-50 border border-transparent hover:border-emerald-200 hover:text-emerald-700 rounded-lg transition-all shadow-2xs disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent disabled:hover:text-[#4C566A] cursor-pointer"
+                    title="Wklej plik w obecnym folderze"
+                    id="btn-paste-file"
+                  >
+                    <Clipboard className="w-4 h-4 text-emerald-600" />
+                    <span className="font-semibold">Wklej</span>
+                    {clipboardNodeId && (
+                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce"></span>
+                    )}
+                  </button>
+                </Tooltip>
 
-                <button 
-                  disabled={!selectedNodeId}
-                  onClick={() => selectedNodeId && handleDeleteNode(selectedNodeId)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-red-50/50 border border-transparent hover:border-red-200 hover:text-red-600 rounded-lg transition-all shadow-2xs disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent disabled:hover:text-[#4C566A] cursor-pointer"
-                  title="Usuń zaznaczony element"
-                  id="btn-delete-file"
-                >
-                  <Trash2 className="w-4 h-4 text-red-500" />
-                  <span className="hidden sm:inline font-semibold">Usuń</span>
-                </button>
+                <Tooltip content={currentPathId === 'kosz' ? "Usuń trwale (Bezpowrotnie wyrzuć)" : "Usuń plik (Przenieś do Kosza)"}>
+                  <button 
+                    disabled={!selectedNodeId}
+                    onClick={() => selectedNodeId && handleDeleteNode(selectedNodeId)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-red-50/50 border border-transparent hover:border-red-200 hover:text-red-600 rounded-lg transition-all shadow-2xs disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent disabled:hover:text-[#4C566A] cursor-pointer"
+                    title={currentPathId === 'kosz' ? "Trwale usuń zaznaczony element" : "Usuń zaznaczony element (przenieś do Kosza)"}
+                    id="btn-delete-file"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                    <span className="hidden sm:inline font-semibold">
+                      {currentPathId === 'kosz' ? "Usuń trwale" : "Usuń"}
+                    </span>
+                  </button>
+                </Tooltip>
+
+                {currentPathId === 'kosz' && (
+                  <>
+                    <div className="h-4 w-px bg-[#D8DEE9] mx-1"></div>
+                    
+                    <Tooltip content="Przywróć dane (Wyjmij plik z Kosza do starego folderu)">
+                      <button 
+                        disabled={!selectedNodeId}
+                        onClick={() => selectedNodeId && handleRestoreNode(selectedNodeId)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-blue-50/50 border border-transparent hover:border-blue-200 hover:text-blue-600 rounded-lg transition-all shadow-2xs disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent disabled:hover:text-[#4C566A] cursor-pointer"
+                        title="Przywróć zaznaczony element do oryginalnej lokalizacji"
+                        id="btn-restore-file"
+                      >
+                        <RotateCcw className="w-4 h-4 text-blue-500" />
+                        <span className="hidden sm:inline font-semibold">Przywróć dane</span>
+                      </button>
+                    </Tooltip>
+
+                    <Tooltip content="Opróżnij Kosz (Wyrzuć wszystkie pliki z Kosza na zawsze)">
+                      <button 
+                        disabled={currentChildren.length === 0}
+                        onClick={handleEmptyTrash}
+                        className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-amber-50/50 border border-transparent hover:border-amber-200 hover:text-amber-700 rounded-lg transition-all shadow-2xs disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent disabled:hover:text-[#4C566A] cursor-pointer"
+                        title="Opróżnij cały Kosz"
+                        id="btn-empty-trash"
+                      >
+                        <Trash2 className="w-4 h-4 text-amber-600" />
+                        <span className="hidden sm:inline font-semibold">Opróżnij Kosz</span>
+                      </button>
+                    </Tooltip>
+                  </>
+                )}
               </div>
             </div>
 
             {/* 3. Main Workspace splits */}
             <div className="flex-1 flex min-h-0">
               {/* Sidebar directory tree navigation (Windows Explorer style) */}
-              <div className="w-56 border-r border-[#ECEFF4] p-3 overflow-y-auto space-y-4 bg-[#F8FAFC]/50 select-none hidden md:block">
+              <div className={`w-60 border-r border-[#ECEFF4] p-3 overflow-y-auto space-y-4 bg-[#F8FAFC]/50 select-none flex-shrink-0 transition-all duration-300 ${showFileTree ? 'block' : 'hidden'}`}>
                 <div>
                   <span className="px-2 text-[10px] uppercase font-bold text-gray-400 tracking-wider">Szybki dostęp</span>
                   <div className="mt-1 space-y-0.5">
                     <button 
                       onClick={() => handleFolderClick({ id: 'pulpit', name: 'Pulpit', type: 'directory', parentId: 'root', createdAt: '' })}
-                      className={`w-full text-left px-2 py-1.5 rounded-lg flex items-center gap-2 transition-colors border border-transparent ${currentPathId === 'pulpit' ? 'bg-white text-[#5E81AC] font-bold border-[#D8DEE9] shadow-2xs' : 'hover:bg-[#ECEFF4]/60'}`}
+                      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragOverNodeId('pulpit'); }}
+                      onDragLeave={() => setDragOverNodeId(null)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setDragOverNodeId(null);
+                        const droppedId = e.dataTransfer.getData('text/plain');
+                        if (droppedId) {
+                          handleMoveNode(droppedId, 'pulpit');
+                        }
+                      }}
+                      className={`w-full text-left px-2 py-1.5 rounded-lg flex items-center gap-2 transition-all border border-transparent ${
+                        currentPathId === 'pulpit' 
+                          ? 'bg-white text-[#5E81AC] font-bold border-[#D8DEE9] shadow-2xs' 
+                          : 'hover:bg-[#ECEFF4]/60'
+                      } ${
+                        dragOverNodeId === 'pulpit'
+                          ? 'bg-blue-100/50 border-dashed border-blue-400 scale-102 font-bold shadow-xs animate-pulse text-[#5E81AC]'
+                          : ''
+                      }`}
                       id="sidebar-link-pulpit"
                     >
                       <Monitor className="w-3.5 h-3.5 text-[#5E81AC]" />
@@ -924,7 +1241,27 @@ export default function WindowsExplorer({
                     </button>
                     <button 
                       onClick={() => handleFolderClick({ id: 'dokumenty', name: 'Dokumenty', type: 'directory', parentId: 'root', createdAt: '' })}
-                      className={`w-full text-left px-2 py-1.5 rounded-lg flex items-center gap-2 transition-colors border border-transparent ${currentPathId === 'dokumenty' ? 'bg-white text-[#5E81AC] font-bold border-[#D8DEE9] shadow-2xs' : 'hover:bg-[#ECEFF4]/60'}`}
+                      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragOverNodeId('dokumenty'); }}
+                      onDragLeave={() => setDragOverNodeId(null)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setDragOverNodeId(null);
+                        const droppedId = e.dataTransfer.getData('text/plain');
+                        if (droppedId) {
+                          handleMoveNode(droppedId, 'dokumenty');
+                        }
+                      }}
+                      className={`w-full text-left px-2 py-1.5 rounded-lg flex items-center gap-2 transition-all border border-transparent ${
+                        currentPathId === 'dokumenty' 
+                          ? 'bg-white text-[#5E81AC] font-bold border-[#D8DEE9] shadow-2xs' 
+                          : 'hover:bg-[#ECEFF4]/60'
+                      } ${
+                        dragOverNodeId === 'dokumenty'
+                          ? 'bg-blue-100/50 border-dashed border-blue-400 scale-102 font-bold shadow-xs animate-pulse text-[#5E81AC]'
+                          : ''
+                      }`}
                       id="sidebar-link-dokumenty"
                     >
                       <Folder className="w-3.5 h-3.5 text-yellow-500 fill-yellow-400" />
@@ -932,11 +1269,72 @@ export default function WindowsExplorer({
                     </button>
                     <button 
                       onClick={() => handleFolderClick({ id: 'pobrane', name: 'Pobrane', type: 'directory', parentId: 'root', createdAt: '' })}
-                      className={`w-full text-left px-2 py-1.5 rounded-lg flex items-center gap-2 transition-colors border border-transparent ${currentPathId === 'pobrane' ? 'bg-white text-[#5E81AC] font-bold border-[#D8DEE9] shadow-2xs' : 'hover:bg-[#ECEFF4]/60'}`}
+                      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragOverNodeId('pobrane'); }}
+                      onDragLeave={() => setDragOverNodeId(null)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setDragOverNodeId(null);
+                        const droppedId = e.dataTransfer.getData('text/plain');
+                        if (droppedId) {
+                          handleMoveNode(droppedId, 'pobrane');
+                        }
+                      }}
+                      className={`w-full text-left px-2 py-1.5 rounded-lg flex items-center gap-2 transition-all border border-transparent ${
+                        currentPathId === 'pobrane' 
+                          ? 'bg-white text-[#5E81AC] font-bold border-[#D8DEE9] shadow-2xs' 
+                          : 'hover:bg-[#ECEFF4]/60'
+                      } ${
+                        dragOverNodeId === 'pobrane'
+                          ? 'bg-blue-100/50 border-dashed border-blue-400 scale-102 font-bold shadow-xs animate-pulse text-[#5E81AC]'
+                          : ''
+                      }`}
                       id="sidebar-link-pobrane"
                     >
                       <Download className="w-3.5 h-3.5 text-green-500" />
                       <span>Pobrane</span>
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setCurrentPathId('kosz');
+                        setSelectedNodeId(null);
+                        setSearchQuery('');
+                      }}
+                      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragOverNodeId('kosz'); }}
+                      onDragLeave={() => setDragOverNodeId(null)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setDragOverNodeId(null);
+                        const droppedId = e.dataTransfer.getData('text/plain');
+                        if (droppedId) {
+                          handleMoveNode(droppedId, 'kosz');
+                        }
+                      }}
+                      className={`w-full text-left px-2 py-1.5 rounded-lg flex items-center gap-2 transition-all border border-transparent ${
+                        currentPathId === 'kosz' 
+                          ? 'bg-white text-[#5E81AC] font-bold border-[#D8DEE9] shadow-2xs' 
+                          : 'hover:bg-[#ECEFF4]/60'
+                      } ${
+                        dragOverNodeId === 'kosz'
+                          ? 'bg-red-50 border-dashed border-red-400 scale-102 font-bold shadow-xs animate-pulse text-red-600'
+                          : ''
+                      }`}
+                      id="sidebar-link-kosz"
+                    >
+                      {isTrashEmpty ? (
+                        <Trash className="w-3.5 h-3.5 text-[#4C566A]" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5 text-red-500 fill-red-100 animate-pulse" />
+                      )}
+                      <span>Kosz</span>
+                      {!isTrashEmpty && (
+                        <span className="ml-auto bg-red-100 text-red-600 text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                          {deletedFilesCount}
+                        </span>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -946,7 +1344,27 @@ export default function WindowsExplorer({
                   <div className="mt-1 space-y-0.5">
                     <button 
                       onClick={() => handleFolderClick({ id: 'root', name: 'C:', type: 'directory', parentId: null, createdAt: '' })}
-                      className={`w-full text-left px-2 py-1.5 rounded-lg flex items-center gap-2 transition-colors border border-transparent ${currentPathId === 'root' ? 'bg-white text-[#5E81AC] font-bold border-[#D8DEE9] shadow-2xs' : 'hover:bg-[#ECEFF4]/60'}`}
+                      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragOverNodeId('root'); }}
+                      onDragLeave={() => setDragOverNodeId(null)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setDragOverNodeId(null);
+                        const droppedId = e.dataTransfer.getData('text/plain');
+                        if (droppedId) {
+                          handleMoveNode(droppedId, 'root');
+                        }
+                      }}
+                      className={`w-full text-left px-2 py-1.5 rounded-lg flex items-center gap-2 transition-all border border-transparent ${
+                        currentPathId === 'root' 
+                          ? 'bg-white text-[#5E81AC] font-bold border-[#D8DEE9] shadow-2xs' 
+                          : 'hover:bg-[#ECEFF4]/60'
+                      } ${
+                        dragOverNodeId === 'root'
+                          ? 'bg-blue-100/50 border-dashed border-blue-400 scale-102 font-bold shadow-xs animate-pulse text-[#5E81AC]'
+                          : ''
+                      }`}
                       id="sidebar-link-root"
                     >
                       <HardDrive className="w-3.5 h-3.5 text-sky-600" />
@@ -962,35 +1380,98 @@ export default function WindowsExplorer({
                     setCurrentPathId={setCurrentPathId}
                     system="windows"
                     minimal={true}
+                    onDropNode={handleMoveNode}
                   />
                 </div>
               </div>
 
               {/* Main Folder Grid Area */}
               <div className="flex-1 bg-white p-4 overflow-y-auto select-none" onClick={() => setSelectedNodeId(null)}>
-                {currentChildren.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center text-gray-400 p-8">
-                    <Folder className="w-16 h-16 stroke-1 text-gray-300 mb-2" />
-                    <p className="font-medium text-sm">Ten folder jest pusty.</p>
-                    <p className="text-xs text-gray-300 mt-1">Użyj paska u góry, aby dodać nowe foldery lub pliki!</p>
+                {currentPathId === 'kosz' && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 flex items-center gap-2.5 text-xs text-amber-800 font-medium animate-fadeIn shadow-2xs">
+                    <Trash2 className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                    <span>Pliki w Koszu są zablokowane. Zaznacz plik lub folder i kliknij <b>„Przywróć dane”</b> u góry, aby go otworzyć, edytować lub przenieść.</span>
                   </div>
+                )}
+
+                {currentChildren.length === 0 ? (
+                  currentPathId === 'kosz' ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center text-gray-400 p-8">
+                      <Trash2 className="w-16 h-16 stroke-1 text-gray-300 mb-2" />
+                      <p className="font-medium text-sm">Kosz jest pusty.</p>
+                      <p className="text-xs text-gray-400 mt-1">Usunięte pliki i foldery trafią tutaj, skąd będziesz mógł je przywrócić.</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-center text-gray-400 p-8">
+                      <Folder className="w-16 h-16 stroke-1 text-gray-300 mb-2" />
+                      <p className="font-medium text-sm">Ten folder jest pusty.</p>
+                      <p className="text-xs text-gray-300 mt-1">Użyj paska u góry, aby dodać nowe foldery lub pliki!</p>
+                    </div>
+                  )
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     {currentChildren.map(node => {
                       const isSelected = selectedNodeId === node.id;
+                      const isFolder = node.type === 'directory';
                       
                       return (
                         <div
                           key={node.id}
+                          draggable={currentPathId !== 'kosz'}
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('text/plain', node.id);
+                            setDraggedNodeId(node.id);
+                          }}
+                          onDragEnd={() => {
+                            setDraggedNodeId(null);
+                            setDragOverNodeId(null);
+                          }}
+                          onDragOver={isFolder && draggedNodeId && draggedNodeId !== node.id ? (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                          } : undefined}
+                          onDragEnter={isFolder && draggedNodeId && draggedNodeId !== node.id ? (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setDragOverNodeId(node.id);
+                          } : undefined}
+                          onDragLeave={isFolder && draggedNodeId && draggedNodeId !== node.id ? (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (dragOverNodeId === node.id) {
+                              setDragOverNodeId(null);
+                            }
+                          } : undefined}
+                          onDrop={isFolder && draggedNodeId && draggedNodeId !== node.id ? (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setDragOverNodeId(null);
+                            const droppedId = e.dataTransfer.getData('text/plain');
+                            if (droppedId) {
+                              handleMoveNode(droppedId, node.id);
+                            }
+                          } : undefined}
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedNodeId(node.id);
                           }}
                           onDoubleClick={() => handleFolderClick(node)}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelectedNodeId(node.id);
+                            setContextMenu({
+                              x: e.clientX,
+                              y: e.clientY,
+                              nodeId: node.id
+                            });
+                          }}
                           className={`p-3 rounded-xl border flex flex-col items-center text-center cursor-pointer transition-all ${
-                            isSelected 
-                              ? 'border-blue-400 bg-blue-50/50 shadow-sm ring-1 ring-blue-400/50' 
-                              : 'border-transparent hover:bg-gray-50 hover:border-gray-100'
+                            dragOverNodeId === node.id && isFolder
+                              ? 'border-dashed border-blue-500 bg-blue-100/50 scale-105 shadow-md font-bold'
+                              : isSelected 
+                                ? 'border-blue-400 bg-blue-50/50 shadow-sm ring-1 ring-blue-400/50' 
+                                : 'border-transparent hover:bg-gray-50 hover:border-gray-100'
                           }`}
                           id={`explorer-item-${node.id}`}
                         >
@@ -1016,13 +1497,26 @@ export default function WindowsExplorer({
               <div className="flex items-center gap-3">
                 <span>Elementy: {currentChildren.length}</span>
                 {selectedNodeId && vfs[selectedNodeId] && (
-                  <span className="text-blue-600 font-medium">
+                  <span className="text-blue-600 font-medium hidden md:inline">
                     Zaznaczono: {vfs[selectedNodeId]?.name} ({vfs[selectedNodeId]?.type === 'directory' ? 'Katalog' : 'Plik'})
                   </span>
                 )}
               </div>
-              <div className="text-right">
-                Kliknij dwukrotnie, aby otworzyć
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={toggleHint}
+                  id="btn-windows-hint"
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] transition-all cursor-pointer font-bold ${
+                    showHint 
+                      ? 'bg-amber-500/20 border-amber-500 text-amber-600' 
+                      : 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-600'
+                  }`}
+                >
+                  <span>💡 Podpowiedź</span>
+                </button>
+                <div className="text-right hidden sm:block">
+                  Kliknij dwukrotnie, aby otworzyć
+                </div>
               </div>
             </div>
           </div>
@@ -1474,6 +1968,264 @@ export default function WindowsExplorer({
           </div>
         </div>
       )}
+      {showHint && hintPosition && hintTarget && (
+        <>
+          {/* Highlight ring around target element */}
+          <div 
+            className="absolute z-40 border-2 border-amber-500 rounded-lg pointer-events-none animate-pulse"
+            style={{
+              top: hintPosition.top - 2,
+              left: hintPosition.left - 2,
+              width: hintPosition.width + 4,
+              height: hintPosition.height + 4,
+              boxShadow: '0 0 0 4px rgba(245, 158, 11, 0.2)',
+            }}
+          />
+          {/* Pulsing floating arrow with description */}
+          <div 
+            className="absolute z-50 pointer-events-none transition-all duration-300"
+            style={{
+              top: hintPosition.top - 45,
+              left: hintPosition.left + hintPosition.width / 2 - 20,
+            }}
+          >
+            <div className="flex flex-col items-center animate-bounce">
+              <div className="bg-amber-500 text-white font-extrabold text-[10px] px-2 py-1 rounded-md shadow-md whitespace-nowrap mb-1 border border-amber-600 animate-pulse">
+                {hintTarget.message}
+              </div>
+              <div className="w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[10px] border-t-amber-500 filter drop-shadow-sm"></div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Context Menu Backdrop & Menu */}
+      {contextMenu && (
+        <>
+          <div 
+            className="fixed inset-0 z-45 bg-transparent" 
+            onClick={() => setContextMenu(null)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setContextMenu(null);
+            }}
+          />
+          <div 
+            className="fixed z-50 bg-white border border-[#D8DEE9] rounded-lg shadow-lg py-1.5 min-w-[170px] text-xs text-gray-700 animate-fadeIn"
+            style={{ 
+              top: Math.min(contextMenu.y, window.innerHeight - 160), 
+              left: Math.min(contextMenu.x, window.innerWidth - 180) 
+            }}
+            id="explorer-context-menu"
+          >
+            {currentPathId === 'kosz' ? (
+              <button 
+                onClick={() => {
+                  handleRestoreNode(contextMenu.nodeId);
+                  setContextMenu(null);
+                }}
+                className="w-full text-left px-3 py-1.5 hover:bg-[#F3F4F6] hover:text-[#5E81AC] flex items-center gap-2 cursor-pointer font-medium"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-blue-500" />
+                <span>Przywróć dane</span>
+              </button>
+            ) : (
+              <>
+                <button 
+                  onClick={() => {
+                    const node = vfs[contextMenu.nodeId];
+                    if (node) handleFolderClick(node);
+                    setContextMenu(null);
+                  }}
+                  className="w-full text-left px-3 py-1.5 hover:bg-[#F3F4F6] hover:text-[#5E81AC] flex items-center gap-2 cursor-pointer font-medium"
+                >
+                  <Play className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Otwórz</span>
+                </button>
+                <button 
+                  onClick={() => {
+                    setClipboardNodeId(contextMenu.nodeId);
+                    setClipboardAction('cut');
+                    setContextMenu(null);
+                  }}
+                  className="w-full text-left px-3 py-1.5 hover:bg-[#F3F4F6] hover:text-[#5E81AC] flex items-center gap-2 cursor-pointer font-medium"
+                >
+                  <Scissors className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Wytnij</span>
+                </button>
+              </>
+            )}
+            <button 
+              onClick={() => {
+                handleDeleteNode(contextMenu.nodeId);
+                setContextMenu(null);
+              }}
+              className="w-full text-left px-3 py-1.5 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 cursor-pointer font-medium"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-red-500" />
+              <span>{currentPathId === 'kosz' ? 'Usuń trwale' : 'Usuń'}</span>
+            </button>
+            <div className="h-px bg-gray-100 my-1"></div>
+            <button 
+              onClick={() => {
+                setPropertiesNodeId(contextMenu.nodeId);
+                setContextMenu(null);
+              }}
+              className="w-full text-left px-3 py-1.5 hover:bg-[#F3F4F6] hover:text-[#5E81AC] flex items-center gap-2 cursor-pointer font-medium"
+              id="context-menu-properties"
+            >
+              <Info className="w-3.5 h-3.5 text-blue-500" />
+              <span>Właściwości</span>
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Properties Modal */}
+      {propertiesNodeId && vfs[propertiesNodeId] && (() => {
+        const node = vfs[propertiesNodeId];
+        
+        let fileTypeStr = 'Plik';
+        if (node.type === 'directory') {
+          fileTypeStr = 'Folder plików (Katalog)';
+        } else if (node.name.toLowerCase().endsWith('.txt')) {
+          fileTypeStr = 'Dokument tekstowy (.txt)';
+        } else if (node.name.toLowerCase().endsWith('.exe')) {
+          fileTypeStr = 'Aplikacja (.exe)';
+        } else if (node.name.toLowerCase().endsWith('.tmp')) {
+          fileTypeStr = 'Plik tymczasowy (.tmp)';
+        } else if (node.name.toLowerCase().endsWith('.sh')) {
+          fileTypeStr = 'Skrypt powłoki (.sh)';
+        } else if (node.name.toLowerCase().endsWith('.png') || node.name.toLowerCase().endsWith('.jpg') || node.name.toLowerCase().endsWith('.gif')) {
+          fileTypeStr = 'Obraz cyfrowy';
+        }
+
+        let locationStr = '';
+        try {
+          locationStr = node.parentId && vfs[node.parentId] ? getWindowsPathString(vfs, node.parentId) : 'C:\\';
+        } catch (e) {
+          locationStr = 'C:\\';
+        }
+
+        let sizeDetails = node.size || '0 B';
+        let folderDetailsStr = '';
+        if (node.type === 'directory') {
+          const info = getFolderContentsInfo(node.id);
+          const friendlyBytes = info.totalBytes >= 1024 * 1024 ? `${(info.totalBytes / (1024 * 1024)).toFixed(1)} MB` : info.totalBytes >= 1024 ? `${(info.totalBytes / 1024).toFixed(1)} KB` : `${info.totalBytes} B`;
+          sizeDetails = friendlyBytes;
+          folderDetailsStr = `Zawiera: ${info.fileCount} plików, ${info.folderCount} folderów`;
+        }
+
+        return (
+          <div className="fixed inset-0 bg-black/45 backdrop-blur-xs flex items-center justify-center z-50 animate-fadeIn" onClick={() => setPropertiesNodeId(null)}>
+            <div 
+              className="bg-[#F8FAFC] border border-[#D8DEE9] rounded-xl shadow-2xl w-full max-w-[360px] text-gray-800 font-sans overflow-hidden animate-scaleIn"
+              onClick={(e) => e.stopPropagation()}
+              id="properties-modal"
+            >
+              {/* Title bar */}
+              <div className="bg-white border-b border-[#E5E9F0] px-4 py-3 flex items-center justify-between select-none">
+                <div className="flex items-center gap-2">
+                  <Info className="w-4 h-4 text-[#5E81AC]" />
+                  <span className="font-bold text-sm text-[#2E3440]">{node.name} - Właściwości</span>
+                </div>
+                <button 
+                  onClick={() => setPropertiesNodeId(null)}
+                  className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors cursor-pointer"
+                  id="properties-close-btn"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Tab Header */}
+              <div className="px-4 pt-3 flex border-b border-[#E5E9F0] bg-white gap-2 select-none">
+                <button className="px-3 py-1.5 text-xs font-semibold text-[#5E81AC] border-b-2 border-[#5E81AC] bg-[#F8FAFC] rounded-t-lg">
+                  Ogólne
+                </button>
+              </div>
+
+              {/* Contents area */}
+              <div className="p-5 space-y-4">
+                {/* Header with icon and name */}
+                <div className="flex items-center gap-4 pb-4 border-b border-gray-150">
+                  <div className="p-2 bg-white rounded-xl border border-gray-200 shadow-3xs flex-shrink-0">
+                    {getFileIcon(node)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <input 
+                      type="text" 
+                      value={node.name}
+                      disabled
+                      className="w-full bg-white border border-gray-200 rounded-lg px-2.5 py-1 text-sm font-semibold text-gray-700 shadow-3xs"
+                    />
+                    <p className="text-[9px] text-gray-400 mt-1 font-mono">ID: {node.id}</p>
+                  </div>
+                </div>
+
+                {/* Details list */}
+                <div className="space-y-3 text-xs text-gray-600">
+                  <div className="grid grid-cols-[90px_1fr] items-baseline">
+                    <span className="text-gray-400 font-medium">Typ pliku:</span>
+                    <span className="text-gray-900 font-semibold">{fileTypeStr}</span>
+                  </div>
+
+                  <div className="grid grid-cols-[90px_1fr] items-baseline">
+                    <span className="text-gray-400 font-medium">Lokalizacja:</span>
+                    <span className="text-gray-900 font-mono break-all bg-white px-1.5 py-0.5 rounded border border-gray-150 text-[10px]">{locationStr}</span>
+                  </div>
+
+                  <div className="h-px bg-gray-200 my-2"></div>
+
+                  <div className="grid grid-cols-[90px_1fr] items-baseline">
+                    <span className="text-gray-400 font-medium">Rozmiar:</span>
+                    <span className="text-gray-900 font-semibold">{sizeDetails}</span>
+                  </div>
+
+                  {folderDetailsStr && (
+                    <div className="grid grid-cols-[90px_1fr] items-baseline">
+                      <span className="text-gray-400 font-medium">Zawartość:</span>
+                      <span className="text-gray-900 font-semibold">{folderDetailsStr}</span>
+                    </div>
+                  )}
+
+                  <div className="h-px bg-gray-200 my-2"></div>
+
+                  <div className="grid grid-cols-[90px_1fr] items-baseline">
+                    <span className="text-gray-400 font-medium">Utworzono:</span>
+                    <span className="text-gray-900 font-medium">{node.createdAt || 'Brak danych'}</span>
+                  </div>
+
+                  <div className="grid grid-cols-[90px_1fr] items-baseline">
+                    <span className="text-gray-400 font-medium">Atrybuty:</span>
+                    <div className="flex items-center gap-3 mt-1 select-none">
+                      <label className="flex items-center gap-1.5 text-gray-500 font-normal">
+                        <input type="checkbox" checked disabled className="rounded border-gray-300 text-[#5E81AC] focus:ring-[#5E81AC] pointer-events-none" />
+                        <span>Tylko do odczytu</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 text-gray-500 font-normal">
+                        <input type="checkbox" checked={node.parentId === 'kosz'} disabled className="rounded border-gray-300 text-[#5E81AC] focus:ring-[#5E81AC] pointer-events-none" />
+                        <span>Kosz</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer actions */}
+              <div className="bg-white border-t border-[#E5E9F0] px-4 py-3 flex justify-end">
+                <button 
+                  onClick={() => setPropertiesNodeId(null)}
+                  className="px-5 py-1.5 bg-[#5E81AC] hover:bg-[#4C566A] text-white text-xs font-bold rounded-lg transition-all shadow-3xs cursor-pointer"
+                  id="properties-ok-btn"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

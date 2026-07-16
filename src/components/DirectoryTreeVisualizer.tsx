@@ -29,6 +29,7 @@ interface DirectoryTreeVisualizerProps {
   selectedFileId?: string | null;
   onSelectFile?: (id: string) => void;
   minimal?: boolean;
+  onDropNode?: (droppedNodeId: string, targetParentId: string) => void;
 }
 
 export default function DirectoryTreeVisualizer({
@@ -38,10 +39,12 @@ export default function DirectoryTreeVisualizer({
   system,
   selectedFileId = null,
   onSelectFile,
-  minimal = false
+  minimal = false,
+  onDropNode
 }: DirectoryTreeVisualizerProps) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({ root: true });
   const [showFiles, setShowFiles] = useState<boolean>(true);
+  const [localDragOverId, setLocalDragOverId] = useState<string | null>(null);
 
   // Automatically expand all ancestor folders of currentPathId so the user can always see where they are
   useEffect(() => {
@@ -141,12 +144,39 @@ export default function DirectoryTreeVisualizer({
         {/* Node label bar */}
         <div 
           onClick={() => handleNodeClick(node)}
+          onDragOver={isDirectory && onDropNode ? (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          } : undefined}
+          onDragEnter={isDirectory && onDropNode ? (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setLocalDragOverId(nodeId);
+          } : undefined}
+          onDragLeave={isDirectory && onDropNode ? (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (localDragOverId === nodeId) {
+              setLocalDragOverId(null);
+            }
+          } : undefined}
+          onDrop={isDirectory && onDropNode ? (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setLocalDragOverId(null);
+            const droppedId = e.dataTransfer.getData('text/plain');
+            if (droppedId && droppedId !== nodeId) {
+              onDropNode(droppedId, nodeId);
+            }
+          } : undefined}
           className={`group flex items-center py-1.5 px-2 rounded-lg cursor-pointer transition-all duration-150 ${
-            isCurrent 
-              ? 'bg-[#5E81AC]/15 text-[#5E81AC] font-bold border border-[#5E81AC]/20' 
-              : isSelectedFile
-                ? 'bg-sky-50 text-sky-700 font-bold border border-sky-100'
-                : 'text-[#4C566A] hover:bg-[#ECEFF4]/60 border border-transparent'
+            localDragOverId === nodeId
+              ? 'bg-blue-100/50 text-[#5E81AC] font-bold border-dashed border-blue-400 border scale-102 shadow-xs'
+              : isCurrent 
+                ? 'bg-[#5E81AC]/15 text-[#5E81AC] font-bold border border-[#5E81AC]/20' 
+                : isSelectedFile
+                  ? 'bg-sky-50 text-sky-700 font-bold border border-sky-100'
+                  : 'text-[#4C566A] hover:bg-[#ECEFF4]/60 border border-transparent'
           }`}
           style={{ paddingLeft: `${Math.max(8, depth * 16)}px` }}
           id={`tree-node-${nodeId}`}

@@ -15,7 +15,11 @@ import {
   AlertCircle, 
   Award,
   ChevronRight,
-  Info
+  Info,
+  Monitor,
+  Trash2,
+  Smile,
+  Gamepad2
 } from 'lucide-react';
 
 interface TheorySectionProps {
@@ -24,60 +28,170 @@ interface TheorySectionProps {
   setQuizDone: (done: boolean) => void;
 }
 
+interface QuizQuestion {
+  id: number;
+  question: string;
+  options: string[];
+  correct: number;
+  explanation: string;
+}
+
+const ALL_QUIZ_QUESTIONS: QuizQuestion[] = [
+  {
+    id: 1,
+    question: 'Który ukośnik (separator) jest używany do zapisu ścieżek w systemie Windows 11?',
+    options: [
+      'Ukośnik prawy / (slash)',
+      'Ukośnik lewy \\ (backslash)',
+      'Dwukropek ::'
+    ],
+    correct: 1,
+    explanation: 'W systemie Windows ścieżki rozdzielamy lewym ukośnikiem (np. C:\\Dokumenty), natomiast w systemie Linux prawym ukośnikiem (np. /home/uczen).'
+  },
+  {
+    id: 2,
+    question: 'Co oznacza komenda "mkdir" w terminalu Linux Ubuntu?',
+    options: [
+      'Usuń folder (make delete)',
+      'Stwórz nowy plik tekstowy (make document)',
+      'Stwórz nowy katalog / folder (make directory)'
+    ],
+    correct: 2,
+    explanation: '"mkdir" to skrót od "make directory" i służy do tworzenia nowych folderów.'
+  },
+  {
+    id: 3,
+    question: 'Jakie rozszerzenie pliku odpowiada zazwyczaj za zwykły dokument tekstowy (Notatnik)?',
+    options: [
+      '.txt',
+      '.png',
+      '.exe'
+    ],
+    correct: 0,
+    explanation: 'Rozszerzenie .txt to zwykły plik tekstowy, .png to obrazek, a .exe to program wykonywalny w Windows.'
+  },
+  {
+    id: 4,
+    question: 'Co oznacza specjalna nazwa folderu zapisywana jako dwie kropki ".." w ścieżce lub poleceniu "cd .."?',
+    options: [
+      'Obecny folder, w którym się znajdujemy',
+      'Folder nadrzędny (poziom wyżej w strukturze)',
+      'Kosz z usuniętymi plikami'
+    ],
+    correct: 1,
+    explanation: '".." (dwie kropki) reprezentują folder o poziom wyżej (rodzica). Jedna kropka "." reprezentuje bieżący katalog.'
+  },
+  {
+    id: 5,
+    question: '👦👧 Wyobraź sobie, że folder na komputerze to pudełko na zabawki. Czym w takim razie są pliki?',
+    options: [
+      'Innymi pustymi pudełkami',
+      'Konkretnymi zabawkami włożonymi do środka (np. rysunkiem, piosenką lub grą)',
+      'Ekranem i obudową komputera'
+    ],
+    correct: 1,
+    explanation: 'Wspaniale! Foldery to szafki lub pudełka, a pliki to konkretne rzeczy włożone do środka (np. Twój rysunek lub piosenka).'
+  },
+  {
+    id: 6,
+    question: '🗑️ Do czego służy magiczny Kosz na komputerze?',
+    options: [
+      'Do grania w koszykówkę na pulpicie',
+      'Do chowania najgorszych ocen ze szkoły',
+      'Na niepotrzebne rzeczy, które można z niego jeszcze wyratować, zanim znikną na zawsze'
+    ],
+    correct: 2,
+    explanation: 'Super! Kosz to bezpieczny śmietnik – pliki tam czekają i możesz je jeszcze odzyskać, zanim opróżnisz kosz na stałe.'
+  },
+  {
+    id: 7,
+    question: '🐧 Jaką rolę pełni główny katalog "/" (ukośnik) w systemie Linux?',
+    options: [
+      'To folder domowy zalogowanego użytkownika',
+      'To korzeń (root) – początek całej struktury plików i folderów',
+      'To folder przeznaczony tylko na tymczasowe pliki'
+    ],
+    correct: 1,
+    explanation: 'Główny ukośnik "/" to tzw. korzeń (root) w systemie Linux. Wszystkie inne foldery na komputerze znajdują się wewnątrz niego.'
+  },
+  {
+    id: 8,
+    question: '💿 Jeśli gra nazywa się "gra.exe", co oznacza część ".exe" na samym końcu?',
+    options: [
+      'To tajny szyfr, który komputer sam wymyślił',
+      'To rozszerzenie pliku, które mówi komputerowi, że to program do uruchomienia',
+      'To skrót od słowa "ekstra"'
+    ],
+    correct: 1,
+    explanation: 'Rozszerzenie .exe (skrót od "executable") oznacza plik wykonywalny, czyli samodzielny program lub grę komputerową.'
+  },
+  {
+    id: 9,
+    question: '⌨️ Która komenda w terminalu Linux służy do pokazania listy wszystkich plików w obecnym folderze?',
+    options: [
+      'ls',
+      'cd',
+      'mkdir'
+    ],
+    correct: 0,
+    explanation: 'Komenda "ls" (skrót od "list") służy do otwierania oczu i sprawdzania, jakie pliki oraz foldery znajdują się w bieżącym miejscu.'
+  },
+  {
+    id: 10,
+    question: '🗺️ Co to jest "Ścieżka dostępu" (path) do pliku w komputerze?',
+    options: [
+      'Droga, którą płynie prąd do monitora',
+      'Dokładny adres pokazujący, przez jakie foldery trzeba po kolei przejść, by znaleźć dany plik',
+      'Hasło zabezpieczające komputer przed wirusami'
+    ],
+    correct: 1,
+    explanation: 'Ścieżka dostępu to taki drogowskaz lub dokładny adres domowy pliku, np. C:\\Szkola\\Zadania\\rysunek.png.'
+  },
+  {
+    id: 11,
+    question: '🔗 Co się stanie, jeśli usuniesz skrót do programu z Pulpitu (np. ikonę z małą strzałką)?',
+    options: [
+      'Cały program zostanie skasowany z dysku i stracisz go',
+      'Usuniesz tylko szybką drogę (drogowskaz), a sam program nadal leży bezpiecznie na dysku',
+      'Komputer automatycznie się zresetuje i zablokuje'
+    ],
+    correct: 1,
+    explanation: 'Skrót to tylko drogowskaz z charakterystyczną strzałką. Jeśli go usuniesz, program nadal jest zainstalowany i bezpieczny!'
+  },
+  {
+    id: 12,
+    question: '💾 Gdzie przechowywane są pliki i system operacyjny, gdy wyłączymy komputer?',
+    options: [
+      'W pamięci operacyjnej RAM',
+      'Na dysku twardym (HDD lub SSD)',
+      'W głośnikach komputerowych'
+    ],
+    correct: 1,
+    explanation: 'Dysk twardy (HDD/SSD) to trwała pamięć komputera. Dane na nim pozostają bezpieczne nawet po odłączeniu zasilania.'
+  }
+];
+
+function getRandomSubset<T>(array: T[], size: number): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const temp = shuffled[i];
+    shuffled[i] = shuffled[j];
+    shuffled[j] = temp;
+  }
+  return shuffled.slice(0, size);
+}
+
 export default function TheorySection({ onAddXP, quizDone, setQuizDone }: TheorySectionProps) {
   const [activeTab, setActiveTab] = useState<'basics' | 'paths' | 'terminal' | 'quiz'>('basics');
   
   // Quiz State
+  const [activeQuestions, setActiveQuestions] = useState<QuizQuestion[]>(() => {
+    return getRandomSubset(ALL_QUIZ_QUESTIONS, 5);
+  });
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [checked, setChecked] = useState(false);
   const [score, setScore] = useState(0);
-
-  const quizQuestions = [
-    {
-      id: 1,
-      question: 'Który ukośnik (separator) jest używany do zapisu ścieżek w systemie Windows 11?',
-      options: [
-        'Ukośnik prawy / (slash)',
-        'Ukośnik lewy \\ (backslash)',
-        'Dwukropek ::'
-      ],
-      correct: 1,
-      explanation: 'W systemie Windows ścieżki rozdzielamy lewym ukośnikiem (np. C:\\Dokumenty), natomiast w systemie Linux prawym ukośnikiem (np. /home/uczen).'
-    },
-    {
-      id: 2,
-      question: 'Co oznacza komenda "mkdir" w terminalu Linux Ubuntu?',
-      options: [
-        'Usuń folder (make delete)',
-        'Stwórz nowy plik tekstowy (make document)',
-        'Stwórz nowy katalog / folder (make directory)'
-      ],
-      correct: 2,
-      explanation: '"mkdir" to skrót od "make directory" i służy do tworzenia nowych folderów.'
-    },
-    {
-      id: 3,
-      question: 'Jakie rozszerzenie pliku odpowiada zazwyczaj za zwykły dokument tekstowy (Notatnik)?',
-      options: [
-        '.txt',
-        '.png',
-        '.exe'
-      ],
-      correct: 0,
-      explanation: 'Rozszerzenie .txt to zwykły plik tekstowy, .png to obrazek, a .exe to program wykonywalny w Windows.'
-    },
-    {
-      id: 4,
-      question: 'Co oznacza specjalna nazwa folderu zapisywana jako dwie kropki ".." w ścieżce lub poleceniu "cd .."?',
-      options: [
-        'Obecny folder, w którym się znajdujemy',
-        'Folder nadrzędny (poziom wyżej w strukturze)',
-        'Kosz z usuniętymi plikami'
-      ],
-      correct: 1,
-      explanation: '".." (dwie kropki) reprezentują folder o poziom wyżej (rodzica). Jedna kropka "." reprezentuje bieżący katalog.'
-    }
-  ];
 
   const handleSelectOption = (qId: number, optIdx: number) => {
     if (checked) return;
@@ -86,7 +200,7 @@ export default function TheorySection({ onAddXP, quizDone, setQuizDone }: Theory
 
   const handleCheckQuiz = () => {
     let rightAnswers = 0;
-    quizQuestions.forEach(q => {
+    activeQuestions.forEach(q => {
       if (answers[q.id] === q.correct) {
         rightAnswers++;
       }
@@ -96,8 +210,8 @@ export default function TheorySection({ onAddXP, quizDone, setQuizDone }: Theory
     
     if (!quizDone) {
       setQuizDone(true);
-      // Award XP for taking quiz: 25 XP per correct answer, min 50 XP
-      const xpEarned = Math.max(50, rightAnswers * 25);
+      // Award XP for taking quiz: 20 XP per correct answer (max 100 XP)
+      const xpEarned = rightAnswers * 20;
       onAddXP(xpEarned);
     }
   };
@@ -106,6 +220,7 @@ export default function TheorySection({ onAddXP, quizDone, setQuizDone }: Theory
     setAnswers({});
     setChecked(false);
     setScore(0);
+    setActiveQuestions(getRandomSubset(ALL_QUIZ_QUESTIONS, 5));
   };
 
   return (
@@ -256,6 +371,58 @@ export default function TheorySection({ onAddXP, quizDone, setQuizDone }: Theory
                 </div>
               </div>
             </div>
+
+            {/* Kids Corner for Basics */}
+            <div className="bg-amber-50/80 border border-yellow-200 rounded-2xl p-6 md:p-8 space-y-4 shadow-sm relative overflow-hidden">
+              <div className="absolute right-4 top-4 text-6xl opacity-10 select-none pointer-events-none">🧸</div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-2xl">👦👧🎒</span>
+                <h4 className="text-lg font-extrabold text-amber-800">Kącik Najmłodszych (Klasy 1-3)</h4>
+                <SpeechButton text="Cześć! Jeśli jesteś w klasie pierwszej, drugiej lub trzeciej, mamy dla Ciebie super proste wyjaśnienie. Wyobraź sobie, że komputer to wielki pokój z zabawkami. Folder to kolorowe, plastikowe pudełko. Samo pudełko jest puste, ale służy do tego, żeby zabawki się nie rozsypały! Możesz do niego wkładać inne, mniejsze pudełka. Plik to konkretna zabawka włożona do pudełka, na przykład Twój piękny rysunek pieska, fajna piosenka o kotku albo gra komputerowa! Każdy plik ma swoją nazwę, żebyś go łatwo znalazł." size="xs" />
+              </div>
+              
+              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 mt-2">
+                <div className="bg-white p-4 rounded-xl border border-yellow-100 flex gap-3">
+                  <div className="text-3xl flex-shrink-0">📦</div>
+                  <div>
+                    <h5 className="font-bold text-amber-900 text-sm">Folder (Nasze Pudełko)</h5>
+                    <p className="text-xs text-gray-600 mt-1">Służy do utrzymywania porządku. W nim chowasz swoje skarby, rysunki i gry!</p>
+                  </div>
+                </div>
+                
+                <div className="bg-white p-4 rounded-xl border border-yellow-100 flex gap-3">
+                  <div className="text-3xl flex-shrink-0">🎨</div>
+                  <div>
+                    <h5 className="font-bold text-amber-900 text-sm">Plik (Twój Skarb)</h5>
+                    <p className="text-xs text-gray-600 mt-1">To konkretna rzecz, np. wierszyk (.txt), rysunek (.png) lub piosenka o piesku (.mp3)!</p>
+                  </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl border border-yellow-100 flex gap-3 sm:col-span-2 md:col-span-1">
+                  <div className="text-3xl flex-shrink-0">🗑️</div>
+                  <div>
+                    <h5 className="font-bold text-amber-900 text-sm">Kosz (Magiczny Śmietnik)</h5>
+                    <p className="text-xs text-gray-600 mt-1">Tu wrzucasz niepotrzebne pliki. Możesz je jeszcze wyjąć, jeśli zmienisz zdanie!</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/60 p-4 rounded-xl border border-yellow-100 mt-2">
+                <h5 className="font-bold text-amber-900 text-sm flex items-center gap-2">
+                  <span>⌨️</span> Czarodziejskie klawisze (Supermoce Klawiatury):
+                </h5>
+                <div className="grid sm:grid-cols-2 gap-3 mt-2 text-xs">
+                  <div className="bg-white p-2.5 rounded-lg border border-yellow-50 flex items-center gap-2">
+                    <span className="bg-yellow-100 text-yellow-800 font-bold px-1.5 py-0.5 rounded font-mono">Ctrl + C</span>
+                    <span className="text-gray-600">Klonuje (kopiuje) zaznaczony plik w pamięci.</span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-lg border border-yellow-50 flex items-center gap-2">
+                    <span className="bg-yellow-100 text-yellow-800 font-bold px-1.5 py-0.5 rounded font-mono">Ctrl + V</span>
+                    <span className="text-gray-600">Stawia (wkleja) sklonowany plik w nowym miejscu!</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -345,6 +512,38 @@ export default function TheorySection({ onAddXP, quizDone, setQuizDone }: Theory
                 </p>
               </div>
             </div>
+
+            {/* Kids Corner for Paths */}
+            <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-6 md:p-8 space-y-4 shadow-sm relative overflow-hidden mt-6">
+              <div className="absolute right-4 top-4 text-6xl opacity-10 select-none pointer-events-none">🗺️</div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-2xl">🗺️🎒</span>
+                <h4 className="text-lg font-extrabold text-emerald-800">Mapa Skarbów dla Klas 1-3!</h4>
+                <SpeechButton text="Wyobraź sobie, że ścieżka dostępu to mapa skarbu, która prowadzi piratów do złota! Pokazuje ona kroki, które musisz przejść, żeby znaleźć swój plik. Na przykład, ścieżka C, ukośnik, Zdjęcia, ukośnik, piesek kropka jot pe gie, mówi komputerowi tak: wejdź do pokoju C, znajdź szafkę o nazwie Zdjęcia, a potem wyciągnij z niej obrazek pieska! W Windowsie kroki rozdzielamy lewym ukośnikiem, a w Linuxie prawym ukośnikiem!" size="xs" />
+              </div>
+              
+              <div className="grid sm:grid-cols-2 gap-4 mt-2">
+                <div className="bg-white p-4 rounded-xl border border-emerald-100">
+                  <h5 className="font-bold text-emerald-900 text-sm flex items-center gap-1.5">
+                    <span>🧭</span> Jak czytać mapę skarbów?
+                  </h5>
+                  <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                    Każdy krok na mapie oddzielamy ukośnikiem. <br />
+                    <code className="font-mono text-emerald-600 font-bold">Dysk C:</code> ➡️ <code className="font-mono text-emerald-600 font-bold">Zabawki</code> ➡️ <code className="font-mono text-emerald-600 font-bold">Misiu.txt</code> oznacza: wejdź na dysk, znajdź szafkę "Zabawki", a w niej pluszaka "Misiu".
+                  </p>
+                </div>
+                
+                <div className="bg-white p-4 rounded-xl border border-emerald-100">
+                  <h5 className="font-bold text-emerald-900 text-sm flex items-center gap-1.5">
+                    <span>🧙‍♂️</span> Dwa ukośniki - strażnicy
+                  </h5>
+                  <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                    W Windowsie drogowskazem jest lewy ukośnik <code className="font-mono font-bold text-sky-600 bg-sky-50 px-1 py-0.5 rounded">\</code> (backslash). <br />
+                    W Linuxie drogowskazem jest prawy ukośnik <code className="font-mono font-bold text-purple-600 bg-purple-50 px-1 py-0.5 rounded">/</code> (slash).
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -419,6 +618,36 @@ export default function TheorySection({ onAddXP, quizDone, setQuizDone }: Theory
                 </tbody>
               </table>
             </div>
+
+            {/* Kids Corner for Terminal */}
+            <div className="bg-purple-50/70 border border-purple-200 rounded-2xl p-6 md:p-8 space-y-4 shadow-sm relative overflow-hidden mt-6">
+              <div className="absolute right-4 top-4 text-6xl opacity-10 select-none pointer-events-none">🪄</div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-2xl">🪄👾🎒</span>
+                <h4 className="text-lg font-extrabold text-purple-800">Czarodziejski mikrofon (Terminal)!</h4>
+                <SpeechButton text="Zazwyczaj klikasz w rysunki myszką. Ale wyobraź sobie, że komputer ma magiczne ucho! Terminal to czarodziejski mikrofon, do którego wpisujesz zaklęcia (czyli komendy). Gdy wpiszesz zaklęcie 'mkdir' i podasz imię, komputer sam wyczaruje nowy folder! A gdy wpiszesz 'ls', pokaże Ci listę wszystkich skarbów w Twoim pudełku. Ucząc się tych komend, stajesz się prawdziwym komputerowym czarodziejem!" size="xs" />
+              </div>
+              
+              <div className="grid sm:grid-cols-3 gap-4 mt-2">
+                <div className="bg-white p-3.5 rounded-xl border border-purple-100 text-center">
+                  <div className="text-2xl mb-1">🔍</div>
+                  <h5 className="font-bold text-purple-950 text-xs">Komenda "ls"</h5>
+                  <p className="text-[11px] text-gray-600 mt-1">To czar "Otwórz oczy!" - pokazuje, jakie zabawki są w pudełku.</p>
+                </div>
+                
+                <div className="bg-white p-3.5 rounded-xl border border-purple-100 text-center">
+                  <div className="text-2xl mb-1">✨</div>
+                  <h5 className="font-bold text-purple-950 text-xs">Komenda "mkdir"</h5>
+                  <p className="text-[11px] text-gray-600 mt-1">To zaklęcie "Stwórz pudełko!" - tworzy nowy pusty folder o dowolnej nazwie.</p>
+                </div>
+
+                <div className="bg-white p-3.5 rounded-xl border border-purple-100 text-center">
+                  <div className="text-2xl mb-1">🏃‍♂️</div>
+                  <h5 className="font-bold text-purple-950 text-xs">Komenda "cd"</h5>
+                  <p className="text-[11px] text-gray-600 mt-1">To czar "Biegnij!" - pozwala Ci wejść do wnętrza wybranego folderu.</p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -432,7 +661,7 @@ export default function TheorySection({ onAddXP, quizDone, setQuizDone }: Theory
             </div>
 
             <div className="space-y-6 max-w-3xl mx-auto">
-              {quizQuestions.map((q, idx) => {
+              {activeQuestions.map((q, idx) => {
                 const selectedOpt = answers[q.id];
                 const isCorrect = selectedOpt === q.correct;
                 
@@ -493,7 +722,7 @@ export default function TheorySection({ onAddXP, quizDone, setQuizDone }: Theory
                 {!checked ? (
                   <button
                     onClick={handleCheckQuiz}
-                    disabled={Object.keys(answers).length < quizQuestions.length}
+                    disabled={Object.keys(answers).length < activeQuestions.length}
                     className="w-full sm:w-auto px-8 py-3 bg-blue-600 text-white font-semibold rounded-xl shadow-md hover:bg-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     id="submit-quiz-btn"
                   >
@@ -504,7 +733,7 @@ export default function TheorySection({ onAddXP, quizDone, setQuizDone }: Theory
                     <div className="flex items-center gap-2">
                       <Award className="w-6 h-6 text-yellow-500" />
                       <span className="font-bold text-gray-800">
-                        Twój wynik: {score} / {quizQuestions.length} ({Math.max(50, score * 25)} XP!)
+                        Twój wynik: {score} / {activeQuestions.length} (+{score * 20} XP!)
                       </span>
                     </div>
                     <button
