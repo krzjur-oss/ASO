@@ -73,7 +73,7 @@ Autor zastrzega sobie prawo do zmiany Regulaminu oraz aktualizacji Aplikacji bez
 
 W sprawach nieuregulowanych niniejszym Regulaminem zastosowanie mają przepisy prawa polskiego, w szczególności Kodeksu cywilnego oraz ustawy o prawie autorskim i prawach pokrewnych.
 
-Kontakt: KrzJur@gmail.com · github.com/krzjur-oss
+Kontakt: kjureczek@proton.me · github.com/krzjur-oss
 
 ---
 

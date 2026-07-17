@@ -58,4 +58,4 @@ W ramach przygotowania kodu do publikacji:
 * **`.github/workflows/deploy.yml`**: Utworzono definicję potoku CI/CD dla GitHub Actions, która automatycznie i bezpłatnie kompiluje i serwuje produkcyjny folder `dist`.
 
 ---
-*Autor programu: mgr Krzysztof Jureczek · KrzJur@gmail.com*
+*Autor programu: mgr Krzysztof Jureczek · kjureczek@proton.me*

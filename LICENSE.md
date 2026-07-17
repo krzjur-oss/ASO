@@ -7,7 +7,7 @@
 **mgr Krzysztof Jureczek**
 *Copyright © 2026 Krzysztof Jureczek. Wszelkie prawa zastrzeżone.*
 
-Kontakt: KrzJur@gmail.com · GitHub: github.com/krzjur-oss
+Kontakt: kjureczek@proton.me · GitHub: github.com/krzjur-oss
 
 ---
 

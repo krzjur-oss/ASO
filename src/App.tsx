@@ -97,6 +97,11 @@ export default function App() {
   // Footer Legal Modal State ('none' | 'regulamin' | 'licencja')
   const [footerModal, setFooterModal] = useState<'none' | 'regulamin' | 'licencja'>('none');
 
+  // First Run Terms and License states
+  const [showFirstRunModal, setShowFirstRunModal] = useState<boolean>(false);
+  const [firstRunTab, setFirstRunTab] = useState<'regulamin' | 'licencja'>('regulamin');
+  const [firstRunAccepted, setFirstRunAccepted] = useState<boolean>(false);
+
   // PWA Installation States
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState<boolean>(false);
@@ -252,6 +257,11 @@ export default function App() {
     }
     if (savedName) {
       setStudentName(savedName);
+    }
+
+    const savedTerms = localStorage.getItem('edu_terms_accepted');
+    if (savedTerms !== 'true') {
+      setShowFirstRunModal(true);
     }
   }, []);
 
@@ -846,7 +856,7 @@ export default function App() {
               <p>Nauczyciel i promotor nowoczesnych metod nauczania informatyki w szkołach.</p>
               <p className="pt-1 flex items-center gap-1">
                 <span>📧</span> 
-                <a href="mailto:KrzJur@gmail.com" className="text-[#5E81AC] hover:underline">KrzJur@gmail.com</a>
+                <a href="mailto:kjureczek@proton.me" className="text-[#5E81AC] hover:underline">kjureczek@proton.me</a>
               </p>
               <p className="flex items-center gap-1">
                 <span>🐙</span> 
@@ -986,7 +996,7 @@ export default function App() {
 
                 <div>
                   <h5 className="font-bold text-[#2E3440] mb-1">§ 7. Postanowienia końcowe</h5>
-                  <p>W sprawach nieuregulowanych niniejszym Regulaminem zastosowanie mają przepisy prawa polskiego, w szczególności Kodeksu cywilnego oraz ustawy o prawie autorskim i prawach pokrewnych. Wszelkie uwagi prosimy kierować na adres: <span className="font-semibold text-[#5E81AC]">KrzJur@gmail.com</span>.</p>
+                  <p>W sprawach nieuregulowanych niniejszym Regulaminem zastosowanie mają przepisy prawa polskiego, w szczególności Kodeksu cywilnego oraz ustawy o prawie autorskim i prawach pokrewnych. Wszelkie uwagi prosimy kierować na adres: <span className="font-semibold text-[#5E81AC]">kjureczek@proton.me</span>.</p>
                 </div>
               </div>
 
@@ -1338,6 +1348,147 @@ export default function App() {
               >
                 Rozumiem
               </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* FIRST RUN TERMS & LICENSE MODAL */}
+      {showFirstRunModal && (
+        <div className="fixed inset-0 bg-[#2E3440]/85 backdrop-blur-md flex items-center justify-center p-4 z-[9999] select-none overflow-hidden animate-fadeIn">
+          <div className="bg-[#F8FAFC] rounded-3xl max-w-3xl w-full max-h-[90vh] shadow-2xl border border-white flex flex-col overflow-hidden text-[#2E3440] animate-scaleUp">
+            
+            {/* Modal Header */}
+            <div className="bg-[#ECEFF4] border-b border-[#D8DEE9] px-6 py-5 text-center">
+              <span className="text-4xl block mb-2 animate-bounce">🎓</span>
+              <h3 className="text-xl font-black text-[#2E3440] tracking-tight">Akademia Systemów Operacyjnych</h3>
+              <p className="text-xs text-[#4C566A] mt-1">Przed rozpoczęciem nauki prosimy o zapoznanie się i zaakceptowanie regulaminu oraz licencji programu.</p>
+            </div>
+
+            {/* Tab selection */}
+            <div className="flex border-b border-[#D8DEE9] bg-white p-2">
+              <button
+                onClick={() => setFirstRunTab('regulamin')}
+                className={`flex-1 py-3 text-center font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                  firstRunTab === 'regulamin'
+                    ? 'bg-[#5E81AC] text-white shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <span>📜</span> 1. Regulamin i RODO
+              </button>
+              <button
+                onClick={() => setFirstRunTab('licencja')}
+                className={`flex-1 py-3 text-center font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                  firstRunTab === 'licencja'
+                    ? 'bg-[#5E81AC] text-white shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <span>⚖️</span> 2. Licencja WLDE
+              </button>
+            </div>
+
+            {/* Scrollable Document Container */}
+            <div className="flex-1 overflow-y-auto p-6 text-xs sm:text-sm leading-relaxed text-[#4C566A] bg-white">
+              {firstRunTab === 'regulamin' ? (
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-base font-extrabold text-[#2E3440] mb-1">Regulamin i Polityka Prywatności aplikacji „Akademia Systemów Operacyjnych”</h4>
+                    <p className="text-xs text-gray-500 font-semibold">Wersja 1.0.0 · obowiązuje od 16 lipca 2026 r.</p>
+                  </div>
+                  <div className="border-t border-[#D8DEE9] pt-3 space-y-3">
+                    <div>
+                      <h5 className="font-bold text-[#2E3440] mb-1">§ 1. Postanowienia ogólne</h5>
+                      <p>Niniejszy Regulamin określa zasady korzystania z aplikacji „Akademia Systemów Operacyjnych”. Właścicielem, twórcą i jedynym autorem Aplikacji jest mgr Krzysztof Jureczek.</p>
+                    </div>
+                    <div>
+                      <h5 className="font-bold text-[#2E3440] mb-1">§ 2. Przeznaczenie Aplikacji</h5>
+                      <p>Aplikacja przeznaczona jest wyłącznie do użytku domowego (prywatnego) oraz edukacyjnego w placówkach oświatowych (lekcje, zajęcia dydaktyczne).</p>
+                    </div>
+                    <div>
+                      <h5 className="font-bold text-[#2E3440] mb-1">§ 3. Zasady korzystania</h5>
+                      <p>Aplikacja jest całkowicie bezpłatna dla celów prywatnych i edukacyjnych. Nie zawiera reklam, płatności ani subskrypcji.</p>
+                    </div>
+                    <div>
+                      <h5 className="font-bold text-[#2E3440] mb-1">§ 4. Prawa autorskie</h5>
+                      <p>Wszelkie prawa do Aplikacji należą wyłącznie do Autora. Zabronione jest kopiowanie kodu, modyfikowanie go, dekompilowanie oraz redystrybucja i jakakolwiek komercjalizacja.</p>
+                    </div>
+                    <div>
+                      <h5 className="font-bold text-[#2E3440] mb-1">§ 5. Dane i prywatność (RODO / GDPR)</h5>
+                      <p>Aplikacja nie wymaga rejestracji ani logowania. Wszystkie wprowadzane dane (imię, punkty XP, postępy) przechowywane są wyłącznie lokalnie w pamięci przeglądarki użytkownika (localStorage) i nigdy nie są wysyłane do sieci.</p>
+                    </div>
+                    <div>
+                      <h5 className="font-bold text-[#2E3440] mb-1">§ 6. Odpowiedzialność</h5>
+                      <p>Aplikacja udostępniana jest w stanie „takim, jakim jest”. Autor nie ponosi odpowiedzialności za utratę danych (np. wskutek czyszczenia przeglądarki) ani błędy działania.</p>
+                    </div>
+                    <div>
+                      <h5 className="font-bold text-[#2E3440] mb-1">§ 7. Postanowienia końcowe</h5>
+                      <p>Wszelkie uwagi prosimy kierować na adres: <span className="font-semibold text-[#5E81AC]">kjureczek@proton.me</span>.</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-base font-extrabold text-[#2E3440] mb-1">Wolna Licencja Domowo-Edukacyjna (Zastrzeżona) — WLDE</h4>
+                    <p className="text-xs text-gray-500 font-bold uppercase tracking-wider text-[#5E81AC]">Projekt: Akademia Systemów Operacyjnych</p>
+                    <p className="text-xs text-gray-400 mt-1">Copyright © 2026 Krzysztof Jureczek. Wszelkie prawa zastrzeżone.</p>
+                  </div>
+                  <div className="border-t border-[#D8DEE9] pt-3 space-y-3">
+                    <div>
+                      <h5 className="font-bold text-[#2E3440] mb-1">§ 1. Definicje</h5>
+                      <p>Oprogramowanie – aplikacja „Akademia Systemów Operacyjnych”. Autor / Licencjodawca – mgr Krzysztof Jureczek, jedyny twórca i wyłączny dysponent autorskich praw majątkowych i osobistych do Oprogramowania.</p>
+                    </div>
+                    <div>
+                      <h5 className="font-bold text-[#2E3440] mb-1">§ 2. Dozwolony użytek (Bezpłatny)</h5>
+                      <p>Autor udziela Użytkownikowi bezpłatnej, niewyłącznej licencji wyłącznie na użytek domowy (prywatny) oraz edukacyjny w placówkach oświatowych (szkoły, świetlice, lekcje).</p>
+                    </div>
+                    <div>
+                      <h5 className="font-bold text-[#2E3440] mb-1">§ 3. Zakazy i ograniczenia</h5>
+                      <p className="font-semibold text-red-500">Zabrania się: kopiowania kodu, modyfikacji kodu/grafiki/treści, rozpowszechniania na innych serwerach lub repozytoriach (np. forki), sprzedaży oraz komercjalizacji.</p>
+                    </div>
+                    <div>
+                      <h5 className="font-bold text-[#2E3440] mb-1">§ 4. Wyłączenie odpowiedzialności</h5>
+                      <p>Oprogramowanie dostarczane jest w stanie, w jakim się znajduje („as is”). Autor nie ponosi odpowiedzialności za jakiekolwiek szkody wynikłe z użytkowania.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Accept checkbox and confirmation button */}
+            <div className="bg-[#ECEFF4] border-t border-[#D8DEE9] p-6 flex flex-col gap-4">
+              <label className="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={firstRunAccepted}
+                  onChange={(e) => setFirstRunAccepted(e.target.checked)}
+                  className="mt-1 w-4.5 h-4.5 rounded-sm border-gray-300 text-[#5E81AC] focus:ring-[#5E81AC]"
+                />
+                <span className="text-xs text-gray-700 font-medium">
+                  Potwierdzam, że zapoznałem się z Regulaminem (wraz z Polityką Prywatności) oraz Licencją WLDE programu Akademia Systemów Operacyjnych i w pełni akceptuję ich warunki.
+                </span>
+              </label>
+
+              <div className="flex justify-end">
+                <button
+                  disabled={!firstRunAccepted}
+                  onClick={() => {
+                    localStorage.setItem('edu_terms_accepted', 'true');
+                    setShowFirstRunModal(false);
+                    playSuccessSound();
+                  }}
+                  className={`px-6 py-3 font-bold rounded-xl text-xs transition-all shadow-md flex items-center gap-2 ${
+                    firstRunAccepted
+                      ? 'bg-[#5E81AC] hover:bg-[#81A1C1] text-white cursor-pointer hover:scale-102 active:scale-98'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  <span>🚀</span> Zaakceptuj i rozpocznij naukę
+                </button>
+              </div>
             </div>
 
           </div>

@@ -97,11 +97,25 @@ export const BADGES: Badge[] = [
     requirement: 'Ukończenie Misji 16'
   },
   {
+    id: 'badge_win_recycle_bin',
+    title: 'Ratownik Danych',
+    description: 'Przywrócono omyłkowo usunięty plik z Kosza w systemie Windows.',
+    icon: '🩹',
+    requirement: 'Ukończenie Misji 17'
+  },
+  {
+    id: 'badge_linux_rm_perm',
+    title: 'Świadomy Użytkownik',
+    description: 'Zrozumiano bezpowrotne usuwanie plików komendą rm w Linux.',
+    icon: '🗑️',
+    requirement: 'Ukończenie Misji 18'
+  },
+  {
     id: 'badge_master',
     title: 'Certyfikowany Administrator',
     description: 'Ukończono wszystkie praktyczne wyzwania z Windows i Linux.',
     icon: '🏆',
-    requirement: 'Ukończenie wszystkich 16 misji'
+    requirement: 'Ukończenie wszystkich 18 misji'
   }
 ];
 
@@ -761,5 +775,99 @@ export const MISSIONS: Mission[] = [
       };
     },
     successMessage: 'Wspaniale! Funkcja wyszukiwania w systemach operacyjnych to potężny sprzymierzeniec. Kiedy masz do czynienia z głębokimi strukturami katalogów, wbudowana wyszukiwarka oszczędza mnóstwo czasu, indeksując nazwy oraz zawartość plików dla błyskawicznych rezultatów!'
+  },
+  {
+    id: 'm17_win_recycle_bin',
+    title: 'Misja 17: Ratowanie z Kosza (Windows)',
+    category: 'windows',
+    difficulty: 'Średni',
+    description: 'Opanuj korzystanie z Kosza systemowego. Przez pomyłkę usunięto z folderu Dokumenty plik „Przepis_na_naleśniki.txt”. Twoim zadaniem jest wejść do Kosza i go przywrócić!',
+    instructions: [
+      'Upewnij się, że jesteś w Eksploratorze Windows.',
+      'Przejdź do folderu Dokumenty, zaznacz plik „Przepis_na_naleśniki.txt” i kliknij przycisk „Usuń” u góry (czerwony kosz).',
+      'Następnie kliknij „Kosz” w lewym boczny panelu szybkiego dostępu.',
+      'Zaznacz usunięty przepis w Koszu i kliknij przycisk „Przywróć dane” w górnym menu.'
+    ],
+    points: 45,
+    initialState: {
+      system: 'windows',
+      currentPathId: 'dokumenty',
+      nodes: createDefaultWindowsVFS()
+    },
+    checkCompleted: (nodes, currentPathId, commandHistory) => {
+      const history = commandHistory || [];
+      const hasDeleted = history.includes('delete:przepis_txt');
+      const hasRestored = history.includes('restore:przepis_txt');
+      const fileNode = nodes['przepis_txt'];
+
+      if (hasDeleted && hasRestored && fileNode && fileNode.parentId === 'dokumenty') {
+        return {
+          completed: true,
+          progressText: 'Brawo! Pomyślnie usunąłeś plik Przepis_na_naleśniki.txt do Kosza, a następnie go stamtąd przywróciłeś.'
+        };
+      } else if (hasDeleted) {
+        if (fileNode && fileNode.parentId === 'kosz') {
+          return {
+            completed: false,
+            progressText: 'Super, plik jest w Koszu! Teraz kliknij na "Kosz" w lewym panelu, zaznacz plik Przepis_na_naleśniki.txt i kliknij przycisk "Przywróć dane".'
+          };
+        } else {
+          return {
+            completed: false,
+            progressText: 'Dobrze, usunąłeś plik, ale jeszcze nie przywróciłeś go z Kosza. Przejdź do Kosza, kliknij lewym przyciskiem myszy na plik i kliknij "Przywróć dane".'
+          };
+        }
+      }
+
+      return {
+        completed: false,
+        progressText: 'Wejdź do folderu Dokumenty, zaznacz Przepis_na_naleśniki.txt, kliknij "Usuń" u góry, a potem przywróć go z Kosza.'
+      };
+    },
+    successMessage: 'Niezwykłe! Kosz systemowy to warstwa bezpieczeństwa przed przypadkowym skasowaniem cennych plików. Usunięte elementy nie znikają od razu z dysku, dając użytkownikowi szansę na ich bezproblemowe odzyskanie!'
+  },
+  {
+    id: 'm18_linux_rm_perm',
+    title: 'Misja 18: Bezpowrotne usuwanie (Linux)',
+    category: 'linux',
+    difficulty: 'Średni',
+    description: 'Naucz się, że w konsoli Linux komenda rm usuwa pliki bezpowrotnie. W tym systemie nie ma domyślnego Kosza w linii poleceń. Usuń niepotrzebny plik „welcome.txt” za pomocą polecenia rm.',
+    instructions: [
+      'Przełącz się do zakładki "Terminal Linux".',
+      'Przejdź do folderu Documents wpisując „cd Documents” i wciskając Enter.',
+      'Wpisz polecenie „rm welcome.txt”, aby bezpowrotnie usunąć plik.',
+      'Wpisz komendę „ls”, aby upewnić się, że plik zniknął na zawsze.'
+    ],
+    points: 45,
+    initialState: {
+      system: 'linux',
+      currentPathId: 'uczen',
+      nodes: createDefaultLinuxVFS()
+    },
+    checkCompleted: (nodes, currentPathId, commandHistory) => {
+      const history = commandHistory || [];
+      const hasRmCmd = history.some(cmd => {
+        const norm = cmd.toLowerCase().trim().replace(/\s+/g, ' ');
+        return norm === 'rm welcome.txt' || (norm.startsWith('rm ') && norm.includes('welcome.txt'));
+      });
+      const fileExists = 'notes_txt' in nodes || Object.values(nodes).some(n => n.name === 'welcome.txt');
+
+      if (hasRmCmd && !fileExists) {
+        return {
+          completed: true,
+          progressText: 'Doskonale! Usunąłeś plik welcome.txt na zawsze za pomocą rm.'
+        };
+      } else if (hasRmCmd) {
+        return {
+          completed: false,
+          progressText: 'Wpisałeś polecenie, ale plik wciąż istnieje. Upewnij się, że jesteś w folderze Documents (cd Documents) i wpisz: rm welcome.txt'
+        };
+      }
+      return {
+        completed: false,
+        progressText: 'Wejdź do Documents (cd Documents) i wpisz polecenie: rm welcome.txt'
+      };
+    },
+    successMessage: 'Świetnie! Linia poleceń Linuxa zakłada, że administrator wie, co robi. Komenda rm nie przenosi plików do żadnego kosza — usuwa je od razu i na stałe. Zawsze używaj rm z dużą ostrożnością!'
   }
 ];

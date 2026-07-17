@@ -169,6 +169,10 @@ export default function MissionsSection({
               if (badge.id === 'badge_linux_guru' && completedMissionIds.includes('m8_linux_cat') && completedMissionIds.includes('m9_linux_rm')) isUnlocked = true;
               if (badge.id === 'badge_chmod_linux' && completedMissionIds.includes('m11_linux_chmod_basic') && completedMissionIds.includes('m12_linux_chmod_exec')) isUnlocked = true;
               if (badge.id === 'badge_sorting_win' && completedMissionIds.includes('m13_win_sort')) isUnlocked = true;
+              if (badge.id === 'badge_linux_grep' && completedMissionIds.includes('m15_linux_grep')) isUnlocked = true;
+              if (badge.id === 'badge_win_search' && completedMissionIds.includes('m16_win_search')) isUnlocked = true;
+              if (badge.id === 'badge_win_recycle_bin' && completedMissionIds.includes('m17_win_recycle_bin')) isUnlocked = true;
+              if (badge.id === 'badge_linux_rm_perm' && completedMissionIds.includes('m18_linux_rm_perm')) isUnlocked = true;
               
               // Master badge is unlocked if all missions are completed
               const hasAllMissions = MISSIONS.every(m => completedMissionIds.includes(m.id));

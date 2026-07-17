@@ -171,6 +171,13 @@ export default function LinuxTerminal({
           message = 'Wpisz polecenie „grep haslo raport.txt”';
         }
         break;
+      case 'm18_linux_rm_perm':
+        if (currentPathId !== 'documents') {
+          message = 'Przejdź do folderu Documents wpisując „cd Documents”';
+        } else {
+          message = 'Wpisz polecenie „rm welcome.txt”';
+        }
+        break;
       default:
         targetId = 'btn-linux-hint';
         message = 'To zadanie wykonaj w systemie Windows';

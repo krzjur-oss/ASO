@@ -311,6 +311,36 @@ export default function WindowsExplorer({
         }
         break;
 
+      case 'm17_win_recycle_bin': {
+        const fileNode = vfs['przepis_txt'];
+        if (fileNode) {
+          if (fileNode.parentId === 'dokumenty') {
+            if (currentPathId !== 'dokumenty') {
+              targetId = 'sidebar-link-dokumenty';
+              message = 'Przejdź do folderu „Dokumenty” w panelu szybki dostęp.';
+            } else if (selectedNodeId !== 'przepis_txt') {
+              targetId = 'explorer-item-przepis_txt';
+              message = 'Zaznacz lewym przyciskiem myszy plik „Przepis_na_naleśniki.txt”.';
+            } else {
+              targetId = 'btn-delete-file';
+              message = 'Kliknij przycisk „Usuń” u góry (ikona czerwonego kosza).';
+            }
+          } else if (fileNode.parentId === 'kosz') {
+            if (currentPathId !== 'kosz') {
+              targetId = 'sidebar-link-kosz';
+              message = 'Kliknij na „Kosz” w lewym panelu szybkiego dostępu.';
+            } else if (selectedNodeId !== 'przepis_txt') {
+              targetId = 'explorer-item-przepis_txt';
+              message = 'Zaznacz plik „Przepis_na_naleśniki.txt” leżący teraz w Koszu.';
+            } else {
+              targetId = 'btn-restore-file';
+              message = 'Kliknij przycisk „Przywróć dane” w górnym menu, aby go odzyskać!';
+            }
+          }
+        }
+        break;
+      }
+
       default:
         targetId = 'btn-windows-hint';
         message = 'To zadanie wykonaj w terminalu Linux';
@@ -562,6 +592,9 @@ export default function WindowsExplorer({
       });
       setSelectedNodeId(null);
       onAddXP(5);
+      setTimeout(() => {
+        onActionTriggered('permanent_delete:' + nodeId);
+      }, 50);
     } else {
       // Move to Recycle Bin (Kosz)
       setVfs(prev => {
@@ -577,11 +610,10 @@ export default function WindowsExplorer({
       });
       setSelectedNodeId(null);
       onAddXP(10);
+      setTimeout(() => {
+        onActionTriggered('delete:' + nodeId);
+      }, 50);
     }
-    
-    setTimeout(() => {
-      onActionTriggered();
-    }, 50);
   };
 
   // Move Node (used for drag and drop)
@@ -649,7 +681,7 @@ export default function WindowsExplorer({
     setSelectedNodeId(null);
     onAddXP(15);
     setTimeout(() => {
-      onActionTriggered();
+      onActionTriggered('restore:' + nodeId);
     }, 50);
   };
 
