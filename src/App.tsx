@@ -1289,39 +1289,79 @@ export default function App() {
 
               {/* Interactive Installation Guide */}
               <div className="space-y-4">
-                <h4 className="font-bold text-sm text-[#2E3440]">Jak zainstalować ręcznie w 3 sekundy?</h4>
+                <div className="flex flex-col gap-1 border-b border-[#D8DEE9] pb-2">
+                  <h4 className="font-extrabold text-sm text-[#2E3440] flex items-center gap-1.5">
+                    <span>⚙️</span> Instrukcja instalacji dla Twojej przeglądarki
+                  </h4>
+                  <p className="text-xs text-gray-500">Aby zainstalować program, musisz najpierw otworzyć go w nowej karcie (nie może działać wewnątrz ramki podglądu AI Studio).</p>
+                </div>
                 
                 <div className="space-y-4 text-xs">
-                  {/* Option 1: Chrome / Edge Desktop */}
-                  <div className="border-l-4 border-[#5E81AC] pl-4 space-y-1">
+                  {/* Google Chrome */}
+                  <div className="border-l-4 border-[#5E81AC] bg-[#F1F5F9]/50 p-3 rounded-r-xl space-y-1">
                     <p className="font-bold text-[#2E3440] flex items-center gap-1.5 text-xs sm:text-sm">
-                      <span>🖥️</span> Na komputerze (Chrome, Edge, Opera)
+                      <span className="text-base">🌐</span> Google Chrome
                     </p>
                     <p className="text-gray-600">
-                      Spójrz na pasek adresu URL na samej górze przeglądarki. Po prawej stronie paska (tuż obok gwiazdki do zakładek) zobaczysz ikonę <strong>„Instaluj aplikację”</strong> (mały monitor ze strzałką w dół). Kliknij ją i zatwierdź!
+                      <strong>Na komputerze:</strong> Kliknij ikonę <strong className="text-[#5E81AC]">„Zainstaluj aplikację”</strong> (monitor ze strzałką w dół) po prawej stronie paska adresu URL, tuż obok gwiazdki zakładek.
                     </p>
                     <p className="text-gray-500 italic">
-                      Alternatywnie: kliknij menu z trzema kropkami <strong className="text-gray-700">⁝</strong> w prawym górnym rogu przeglądarki i wybierz <strong>„Zapisz i zainstaluj” → „Zainstaluj aplikację...”</strong>.
+                      Alternatywnie: kliknij menu z trzema kropkami <strong className="text-gray-700">⁝</strong> w prawym górnym rogu → <strong>„Zapisz i zainstaluj” → „Zainstaluj aplikację...”</strong>.
                     </p>
                   </div>
 
-                  {/* Option 2: Android Chrome */}
-                  <div className="border-l-4 border-[#A3BE8C] pl-4 space-y-1">
+                  {/* Microsoft Edge */}
+                  <div className="border-l-4 border-[#81A1C1] bg-[#F1F5F9]/50 p-3 rounded-r-xl space-y-1">
                     <p className="font-bold text-[#2E3440] flex items-center gap-1.5 text-xs sm:text-sm">
-                      <span>🤖</span> Na telefonie Android (Chrome)
+                      <span className="text-base">🌊</span> Microsoft Edge
                     </p>
                     <p className="text-gray-600">
-                      Kliknij ikonkę trzech kropek <strong className="text-gray-700">⁝</strong> w prawym górnym rogu Chrome, a następnie wybierz pozycję <strong>„Dodaj do ekranu głównego”</strong> lub <strong>„Zainstaluj aplikację”</strong>.
+                      <strong>Na komputerze:</strong> Po prawej stronie paska adresu (obok ikony ulubionych) zobaczysz ikonę <strong>„Dostępna aplikacja”</strong> (trzy kwadraty i plus). Kliknij ją, aby zainstalować.
+                    </p>
+                    <p className="text-gray-500 italic">
+                      Alternatywnie: Kliknij menu trzech kropek <strong className="text-gray-700">...</strong> w prawym górnym rogu Edge → przejdź do zakładki <strong>„Aplikacje”</strong> → wybierz <strong>„Zainstaluj tę witrynę jako aplikację”</strong>.
                     </p>
                   </div>
 
-                  {/* Option 3: iOS Safari (iPhone / iPad) */}
-                  <div className="border-l-4 border-[#B48EAD] pl-4 space-y-1">
+                  {/* Brave Browser */}
+                  <div className="border-l-4 border-[#D08770] bg-[#F1F5F9]/50 p-3 rounded-r-xl space-y-1.5">
                     <p className="font-bold text-[#2E3440] flex items-center gap-1.5 text-xs sm:text-sm">
-                      <span>🍏</span> Na telefonie iPhone i iPadzie (Safari)
+                      <span className="text-base">🦁</span> Brave Browser
                     </p>
                     <p className="text-gray-600">
-                      W dolnym menu Safari kliknij ikonkę <strong>Udostępnij</strong> (kwadrat z wychodzącą strzałką w górę), przewiń menu w dół i wybierz pozycję <strong>„Dodaj do ekranu początkowego”</strong>.
+                      <strong>Ważne (Tarcze ochronne):</strong> Agresywne filtry Brave Shields mogą czasami blokować instalacje PWA. Jeśli nie widzisz ikony instalacji, kliknij ikonę <strong>lwa/tarczy Brave</strong> po prawej stronie paska adresu i tymczasowo wyłącz tarcze ochronne dla tej witryny, a następnie odśwież stronę.
+                    </p>
+                    <p className="text-gray-600">
+                      <strong>Na komputerze:</strong> Po wyłączeniu tarcz (lub otwarciu w nowej karcie), kliknij ikonę <strong>„Instaluj”</strong> na pasku adresu po prawej stronie, lub kliknij menu główne (trzy kreski <strong>☰</strong>) i wybierz <strong>„Zainstaluj: Akademia Systemów Operacyjnych...”</strong>.
+                    </p>
+                  </div>
+
+                  {/* Vivaldi */}
+                  <div className="border-l-4 border-[#BF616A] bg-[#F1F5F9]/50 p-3 rounded-r-xl space-y-1">
+                    <p className="font-bold text-[#2E3440] flex items-center gap-1.5 text-xs sm:text-sm">
+                      <span className="text-base">❤️</span> Vivaldi Browser
+                    </p>
+                    <p className="text-gray-600 font-semibold text-[#BF616A]">
+                      Najszybszy i najbardziej niezawodny sposób w Vivaldi:
+                    </p>
+                    <p className="text-gray-600">
+                      Kliknij <strong>prawym przyciskiem myszy na kartę</strong> z naszą stroną na samej górze przeglądarki, a następnie z menu kontekstowego wybierz pozycję <strong>„Zainstaluj Akademia Systemów Operacyjnych...”</strong>.
+                    </p>
+                    <p className="text-gray-500 italic">
+                      Alternatywnie: Kliknij ikonę instalacji aplikacji (strzałka w dół w kółku) na pasku adresu po prawej stronie, lub wejdź w menu główne Vivaldi (logo V w lewym górnym rogu) → <strong>„Plik” → „Zainstaluj Akademia...”</strong>.
+                    </p>
+                  </div>
+
+                  {/* Mobile Devices */}
+                  <div className="border-l-4 border-[#A3BE8C] bg-[#F1F5F9]/50 p-3 rounded-r-xl space-y-2">
+                    <p className="font-bold text-[#2E3440] flex items-center gap-1.5 text-xs sm:text-sm">
+                      <span className="text-base">📱</span> Telefony i tablety (Android / iOS)
+                    </p>
+                    <p className="text-gray-600">
+                      <strong>Android (Chrome/Edge/Brave):</strong> Kliknij ikonę menu w prawym górnym rogu i wybierz <strong>„Dodaj do ekranu głównego”</strong> lub <strong>„Zainstaluj aplikację”</strong>.
+                    </p>
+                    <p className="text-gray-600">
+                      <strong>iOS (Safari):</strong> Kliknij przycisk <strong>„Udostępnij”</strong> (kwadrat ze strzałką w górę) na dolnym pasku Safari, przewiń w dół i wybierz <strong>„Dodaj do ekranu początkowego”</strong>.
                     </p>
                   </div>
                 </div>
