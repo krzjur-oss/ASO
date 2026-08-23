@@ -1245,11 +1245,9 @@ export default function LinuxTerminal({
               </div>
               <button 
                 onClick={() => {
-                  if (confirm('Czy chcesz zresetować widok Ubuntu?')) {
-                    setOpenApps(['terminal']);
-                    setActiveApp('terminal');
-                    setShowApplicationsMenu(false);
-                  }
+                  setOpenApps(['terminal']);
+                  setActiveApp('terminal');
+                  setShowApplicationsMenu(false);
                 }}
                 className="hover:bg-orange-500/20 hover:text-orange-400 px-2.5 py-1 rounded-lg transition-all text-xs font-mono"
               >

@@ -30,6 +30,7 @@ import { VFSNode, Mission } from './types';
 import { createDefaultWindowsVFS, createDefaultLinuxVFS, getCurrentDateString } from './utils/fileSystem';
 import { MISSIONS } from './utils/missions';
 import { playClickSound, playSuccessSound, speakText, stopSpeaking } from './utils/audio';
+import { safeStorage } from './utils/storage';
 
 // Component Imports
 import TheorySection from './components/TheorySection';
@@ -237,10 +238,10 @@ export default function App() {
 
   // Load progress from localStorage on mount
   useEffect(() => {
-    const savedMissions = localStorage.getItem('edu_completed_missions');
-    const savedXP = localStorage.getItem('edu_total_xp');
-    const savedQuiz = localStorage.getItem('edu_quiz_done');
-    const savedName = localStorage.getItem('edu_student_name');
+    const savedMissions = safeStorage.getItem('edu_completed_missions');
+    const savedXP = safeStorage.getItem('edu_total_xp');
+    const savedQuiz = safeStorage.getItem('edu_quiz_done');
+    const savedName = safeStorage.getItem('edu_student_name');
 
     if (savedMissions) {
       try {
@@ -259,7 +260,7 @@ export default function App() {
       setStudentName(savedName);
     }
 
-    const savedTerms = localStorage.getItem('edu_terms_accepted');
+    const savedTerms = safeStorage.getItem('edu_terms_accepted');
     if (savedTerms !== 'true') {
       setShowFirstRunModal(true);
     }
@@ -267,9 +268,9 @@ export default function App() {
 
   // Save progress helper
   const saveProgress = (missions: string[], points: number, quizCompleted: boolean) => {
-    localStorage.setItem('edu_completed_missions', JSON.stringify(missions));
-    localStorage.setItem('edu_total_xp', points.toString());
-    localStorage.setItem('edu_quiz_done', quizCompleted ? 'true' : 'false');
+    safeStorage.setItem('edu_completed_missions', JSON.stringify(missions));
+    safeStorage.setItem('edu_total_xp', points.toString());
+    safeStorage.setItem('edu_quiz_done', quizCompleted ? 'true' : 'false');
   };
 
   // Add XP helper
@@ -386,26 +387,24 @@ export default function App() {
 
   // Reset entire educational progress to zero
   const handleResetAllProgress = () => {
-    if (window.confirm('Czy na pewno chcesz zresetować całą naukę, punkty i odznaki? Te dane zostaną utracone!')) {
-      localStorage.clear();
-      setCompletedMissionIds([]);
-      setTotalPoints(0);
-      setActiveMissionId(null);
-      setCommandHistory([]);
-      setQuizDone(false);
-      setWindowsVfs(createDefaultWindowsVFS());
-      setWindowsPathId('root');
-      setLinuxVfs(createDefaultLinuxVFS());
-      setLinuxPathId('uczen');
-      setStudentName('');
-      setActiveTab('theory');
-    }
+    safeStorage.clear();
+    setCompletedMissionIds([]);
+    setTotalPoints(0);
+    setActiveMissionId(null);
+    setCommandHistory([]);
+    setQuizDone(false);
+    setWindowsVfs(createDefaultWindowsVFS());
+    setWindowsPathId('root');
+    setLinuxVfs(createDefaultLinuxVFS());
+    setLinuxPathId('uczen');
+    setStudentName('');
+    setActiveTab('theory');
   };
 
   // Save student name changes
   const handleSaveStudentName = (name: string) => {
     setStudentName(name);
-    localStorage.setItem('edu_student_name', name);
+    safeStorage.setItem('edu_student_name', name);
   };
 
   // Rank determination
@@ -1516,7 +1515,7 @@ export default function App() {
                 <button
                   disabled={!firstRunAccepted}
                   onClick={() => {
-                    localStorage.setItem('edu_terms_accepted', 'true');
+                    safeStorage.setItem('edu_terms_accepted', 'true');
                     setShowFirstRunModal(false);
                     playSuccessSound();
                   }}

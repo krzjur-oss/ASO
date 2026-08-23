@@ -1,4 +1,5 @@
 import React, { ErrorInfo, ReactNode } from 'react';
+import { safeStorage } from '../utils/storage';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -25,11 +26,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   private handleReset = () => {
-    try {
-      localStorage.clear();
-    } catch (e) {
-      console.warn(e);
-    }
+    safeStorage.clear();
     window.location.reload();
   };
 

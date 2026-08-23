@@ -1933,11 +1933,9 @@ export default function WindowsExplorer({
               </div>
               <button 
                 onClick={() => {
-                  if (confirm('Czy zresetować widok symulatora pulpitu?')) {
-                    setOpenApps(['explorer']);
-                    setActiveApp('explorer');
-                    setStartMenuOpen(false);
-                  }
+                  setOpenApps(['explorer']);
+                  setActiveApp('explorer');
+                  setStartMenuOpen(false);
                 }}
                 className="hover:bg-red-50 hover:text-red-600 px-2.5 py-1 rounded-lg transition-all border border-transparent hover:border-red-100 font-bold"
               >

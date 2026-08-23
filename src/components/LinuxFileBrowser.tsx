@@ -306,26 +306,24 @@ export default function LinuxFileBrowser({
       return;
     }
 
-    if (window.confirm(`Czy na pewno chcesz usunąć "${node.name}" w systemie Linux?`)) {
-      const deleteRecursive = (id: string, currentVfs: Record<string, VFSNode>) => {
-        delete currentVfs[id];
-        Object.keys(currentVfs).forEach(key => {
-          if (currentVfs[key]?.parentId === id) {
-            deleteRecursive(key, currentVfs);
-          }
-        });
-      };
-
-      setVfs(prev => {
-        const next = { ...prev };
-        deleteRecursive(targetId, next);
-        return next;
+    const deleteRecursive = (id: string, currentVfs: Record<string, VFSNode>) => {
+      delete currentVfs[id];
+      Object.keys(currentVfs).forEach(key => {
+        if (currentVfs[key]?.parentId === id) {
+          deleteRecursive(key, currentVfs);
+        }
       });
+    };
 
-      setSelectedNodeId(null);
-      onAddXP(15);
-      onActionTriggered();
-    }
+    setVfs(prev => {
+      const next = { ...prev };
+      deleteRecursive(targetId, next);
+      return next;
+    });
+
+    setSelectedNodeId(null);
+    onAddXP(15);
+    onActionTriggered();
   };
 
   const getFileIcon = (node: VFSNode) => {

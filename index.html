@@ -5,35 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Akademia Systemów Operacyjnych - Interaktywny Symulator</title>
     
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    
     <!-- PWA Meta Tags -->
-    <link rel="manifest" href="./manifest.json" />
     <meta name="theme-color" content="#5E81AC" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Akademia SO" />
-    <link rel="apple-touch-icon" href="./icon-512.jpg" />
-    <link rel="icon" type="image/jpeg" href="./icon-512.jpg" />
   </head>
-  <body>
+  <body class="bg-[#E5E9F0] text-[#2E3440] antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
 
-    <!-- Active Service Worker cleanup for smooth development preview -->
+    <!-- Defensive Service Worker & Cache cleanup for smooth preview -->
     <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for (let registration of registrations) {
-            registration.unregister();
-          }
-        });
-      }
-      if ('caches' in window) {
-        caches.keys().then(function(names) {
-          for (let name of names) {
-            caches.delete(name);
-          }
-        });
-      }
+      try {
+        if ('serviceWorker' in navigator && navigator.serviceWorker.getRegistrations) {
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for (var i = 0; i < registrations.length; i++) {
+              registrations[i].unregister().catch(function() {});
+            }
+          }).catch(function() {});
+        }
+        if ('caches' in window && window.caches.keys) {
+          caches.keys().then(function(names) {
+            for (var i = 0; i < names.length; i++) {
+              caches.delete(names[i]).catch(function() {});
+            }
+          }).catch(function() {});
+        }
+      } catch (err) {}
     </script>
   </body>
 </html>
