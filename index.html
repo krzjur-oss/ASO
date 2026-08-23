@@ -18,17 +18,20 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
 
-    <!-- Service Worker Registration -->
+    <!-- Active Service Worker cleanup for smooth development preview -->
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js')
-            .then((reg) => {
-              console.log('Service Worker zarejestrowany pomyślnie!', reg.scope);
-            })
-            .catch((err) => {
-              console.warn('Rejestracja Service Workera nie powiodła się:', err);
-            });
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for (let registration of registrations) {
+            registration.unregister();
+          }
+        });
+      }
+      if ('caches' in window) {
+        caches.keys().then(function(names) {
+          for (let name of names) {
+            caches.delete(name);
+          }
         });
       }
     </script>

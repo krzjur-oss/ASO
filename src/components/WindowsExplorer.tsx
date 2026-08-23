@@ -28,7 +28,9 @@ import {
   Clipboard,
   Network,
   RotateCcw,
-  Info
+  Info,
+  Copy,
+  RotateCw
 } from 'lucide-react';
 import { VFSNode } from '../types';
 import { 
@@ -91,9 +93,9 @@ export default function WindowsExplorer({
   // Selection states for Explorer
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   
-  // Clipboard states for Move operations
+  // Clipboard states for Move and Copy operations
   const [clipboardNodeId, setClipboardNodeId] = useState<string | null>(null);
-  const [clipboardAction, setClipboardAction] = useState<'cut' | null>(null);
+  const [clipboardAction, setClipboardAction] = useState<'cut' | 'copy' | null>(null);
   
   // Modal states for Explorer
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
@@ -113,8 +115,8 @@ export default function WindowsExplorer({
   // File Tree Panel visibility state
   const [showFileTree, setShowFileTree] = useState(true);
 
-  // Context Menu and Properties modal States
-  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, nodeId: string } | null>(null);
+  // Context Menu and Properties modal States (nodeId === null denotes folder background)
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, nodeId: string | null } | null>(null);
   const [propertiesNodeId, setPropertiesNodeId] = useState<string | null>(null);
 
   // Drag and Drop States
@@ -715,44 +717,105 @@ export default function WindowsExplorer({
   };
 
   // Clipboard: Cut node (Wytnij)
-  const handleCut = () => {
-    if (!selectedNodeId) return;
-    setClipboardNodeId(selectedNodeId);
+  const handleCut = (nodeId?: string) => {
+    const targetId = nodeId || selectedNodeId;
+    if (!targetId) return;
+    setClipboardNodeId(targetId);
     setClipboardAction('cut');
+    onAddXP(5);
+  };
+
+  // Clipboard: Copy node (Kopiuj)
+  const handleCopy = (nodeId?: string) => {
+    const targetId = nodeId || selectedNodeId;
+    if (!targetId) return;
+    setClipboardNodeId(targetId);
+    setClipboardAction('copy');
+    onAddXP(5);
+  };
+
+  // Open Rename modal
+  const handleOpenRename = (nodeId?: string) => {
+    const targetId = nodeId || selectedNodeId;
+    if (!targetId) return;
+    const node = vfs[targetId];
+    if (!node) return;
+    setSelectedNodeId(targetId);
+    setNewItemName(node.name);
+    setErrorMsg('');
+    setIsRenameOpen(true);
   };
 
   // Clipboard: Paste node (Wklej)
   const handlePaste = () => {
-    if (!clipboardNodeId || clipboardAction !== 'cut') return;
+    if (!clipboardNodeId || !clipboardAction || currentPathId === 'kosz') return;
     
-    const nodeToMove = vfs[clipboardNodeId];
-    if (!nodeToMove) return;
+    const sourceNode = vfs[clipboardNodeId];
+    if (!sourceNode) return;
 
-    // Prevent pasting a directory inside itself or its children
-    if (nodeToMove.type === 'directory') {
-      let tempParentId: string | null = currentPathId;
-      while (tempParentId) {
-        if (tempParentId === nodeToMove.id) {
-          alert('Błąd: Nie można wkleić folderu do samego siebie ani do jego podfolderów!');
-          return;
+    if (clipboardAction === 'cut') {
+      // Prevent pasting a directory inside itself or its children
+      if (sourceNode.type === 'directory') {
+        let tempParentId: string | null = currentPathId;
+        while (tempParentId) {
+          if (tempParentId === sourceNode.id) {
+            alert('Błąd: Nie można wkleić folderu do samego siebie ani do jego podfolderów!');
+            return;
+          }
+          const parentNode = vfs[tempParentId];
+          tempParentId = parentNode ? parentNode.parentId : null;
         }
-        const parentNode = vfs[tempParentId];
-        tempParentId = parentNode ? parentNode.parentId : null;
       }
+
+      setVfs(prev => ({
+        ...prev,
+        [clipboardNodeId]: {
+          ...prev[clipboardNodeId],
+          parentId: currentPathId
+        }
+      }));
+
+      setClipboardNodeId(null);
+      setClipboardAction(null);
+    } else if (clipboardAction === 'copy') {
+      // Duplicate file or directory recursively
+      setVfs(prev => {
+        const nextVfs = { ...prev };
+        const cloneTree = (origId: string, newParentId: string, isRootCopy: boolean) => {
+          const orig = prev[origId];
+          if (!orig) return;
+          const newId = generateId();
+          let targetName = orig.name;
+          if (isRootCopy) {
+            if (nodeExists(nextVfs, newParentId, targetName)) {
+              const dotIdx = targetName.lastIndexOf('.');
+              if (dotIdx !== -1 && orig.type === 'file') {
+                const base = targetName.substring(0, dotIdx);
+                const ext = targetName.substring(dotIdx);
+                targetName = `${base} - kopia${ext}`;
+              } else {
+                targetName = `${targetName} - kopia`;
+              }
+            }
+          }
+          nextVfs[newId] = {
+            ...orig,
+            id: newId,
+            name: targetName,
+            parentId: newParentId,
+            createdAt: getCurrentDateString()
+          };
+          if (orig.type === 'directory') {
+            const children = (Object.values(prev) as VFSNode[]).filter(n => n.parentId === origId);
+            children.forEach(ch => cloneTree(ch.id, newId, false));
+          }
+        };
+        cloneTree(clipboardNodeId, currentPathId, true);
+        return nextVfs;
+      });
     }
 
-    setVfs(prev => ({
-      ...prev,
-      [clipboardNodeId]: {
-        ...prev[clipboardNodeId],
-        parentId: currentPathId
-      }
-    }));
-
-    setClipboardNodeId(null);
-    setClipboardAction(null);
     onAddXP(15);
-    
     setTimeout(() => {
       onActionTriggered();
     }, 50);
@@ -1182,17 +1245,33 @@ export default function WindowsExplorer({
                   </button>
                 </Tooltip>
 
+                <Tooltip content="Kopiuj zaznaczony element (duplikuj lub przenieś kopię)">
+                  <button 
+                    disabled={!selectedNodeId || currentPathId === 'kosz'}
+                    onClick={() => handleCopy()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-blue-50 border border-transparent hover:border-blue-200 hover:text-blue-700 rounded-lg transition-all shadow-2xs disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent disabled:hover:text-[#4C566A] cursor-pointer"
+                    title="Kopiuj (Ctrl+C)"
+                    id="btn-copy-file"
+                  >
+                    <Copy className="w-4 h-4 text-blue-500" />
+                    <span className="font-semibold">Kopiuj</span>
+                    {clipboardNodeId && clipboardAction === 'copy' && clipboardNodeId === selectedNodeId && (
+                      <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-ping"></span>
+                    )}
+                  </button>
+                </Tooltip>
+
                 <Tooltip content="Wytnij zaznaczony plik (przygotuj do przeniesienia)">
                   <button 
                     disabled={!selectedNodeId || currentPathId === 'kosz'}
-                    onClick={handleCut}
+                    onClick={() => handleCut()}
                     className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-emerald-50 border border-transparent hover:border-emerald-200 hover:text-emerald-700 rounded-lg transition-all shadow-2xs disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent disabled:hover:text-[#4C566A] cursor-pointer"
                     title="Wytnij (przygotuj plik do przeniesienia)"
                     id="btn-cut-file"
                   >
                     <Scissors className="w-4 h-4 text-emerald-500" />
                     <span className="font-semibold">Wytnij</span>
-                    {clipboardNodeId && clipboardNodeId === selectedNodeId && (
+                    {clipboardNodeId && clipboardAction === 'cut' && clipboardNodeId === selectedNodeId && (
                       <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-ping"></span>
                     )}
                   </button>
@@ -1445,7 +1524,19 @@ export default function WindowsExplorer({
               </div>
 
               {/* Main Folder Grid Area */}
-              <div className="flex-1 bg-white p-4 overflow-y-auto select-none" onClick={() => setSelectedNodeId(null)}>
+              <div 
+                className="flex-1 bg-white p-4 overflow-y-auto select-none relative" 
+                onClick={() => setSelectedNodeId(null)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setContextMenu({
+                    x: e.clientX,
+                    y: e.clientY,
+                    nodeId: null
+                  });
+                }}
+                id="explorer-folder-background"
+              >
                 {currentPathId === 'kosz' && (
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 flex items-center gap-2.5 text-xs text-amber-800 font-medium animate-fadeIn shadow-2xs">
                     <Trash2 className="w-4 h-4 text-amber-600 flex-shrink-0" />
@@ -2107,72 +2198,253 @@ export default function WindowsExplorer({
             }}
           />
           <div 
-            className="fixed z-50 bg-white border border-[#D8DEE9] rounded-lg shadow-lg py-1.5 min-w-[170px] text-xs text-gray-700 animate-fadeIn"
+            className="fixed z-50 bg-white/95 backdrop-blur-md border border-[#D8DEE9] rounded-2xl shadow-2xl py-1.5 min-w-[210px] text-xs text-gray-700 animate-fadeIn ring-1 ring-black/5 select-none"
             style={{ 
-              top: Math.min(contextMenu.y, window.innerHeight - 160), 
-              left: Math.min(contextMenu.x, window.innerWidth - 180) 
+              top: Math.min(contextMenu.y, window.innerHeight - 280), 
+              left: Math.min(contextMenu.x, window.innerWidth - 230) 
             }}
             id="explorer-context-menu"
+            onClick={(e) => e.stopPropagation()}
           >
-            {currentPathId === 'kosz' ? (
-              <button 
-                onClick={() => {
-                  handleRestoreNode(contextMenu.nodeId);
-                  setContextMenu(null);
-                }}
-                className="w-full text-left px-3 py-1.5 hover:bg-[#F3F4F6] hover:text-[#5E81AC] flex items-center gap-2 cursor-pointer font-medium"
-              >
-                <RotateCcw className="w-3.5 h-3.5 text-blue-500" />
-                <span>Przywróć dane</span>
-              </button>
-            ) : (
+            {contextMenu.nodeId ? (
+              /* Item Context Menu (PPM na pliku lub folderze) */
               <>
+                <div className="px-3 py-1.5 text-[10px] font-bold uppercase text-gray-400 border-b border-gray-100 flex items-center justify-between">
+                  <span className="truncate max-w-[140px] font-medium text-gray-600">{vfs[contextMenu.nodeId]?.name}</span>
+                  <span className="text-[9px] text-blue-500 font-mono font-bold bg-blue-50 px-1 py-0.5 rounded">PPM</span>
+                </div>
+
+                {currentPathId === 'kosz' ? (
+                  <>
+                    <button 
+                      onClick={() => {
+                        handleRestoreNode(contextMenu.nodeId!);
+                        setContextMenu(null);
+                      }}
+                      className="w-full text-left px-3 py-2 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2.5 cursor-pointer font-medium transition-colors"
+                      id="context-menu-restore"
+                    >
+                      <RotateCcw className="w-4 h-4 text-blue-500" />
+                      <span>Przywróć dane</span>
+                    </button>
+                    <button 
+                      onClick={() => {
+                        handleDeleteNode(contextMenu.nodeId!);
+                        setContextMenu(null);
+                      }}
+                      className="w-full text-left px-3 py-2 hover:bg-red-50 hover:text-red-600 flex items-center gap-2.5 cursor-pointer font-medium transition-colors"
+                      id="context-menu-delete-perm"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                      <span>Usuń trwale</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button 
+                      onClick={() => {
+                        const node = vfs[contextMenu.nodeId!];
+                        if (node) handleFolderClick(node);
+                        setContextMenu(null);
+                      }}
+                      className="w-full text-left px-3 py-2 hover:bg-[#F3F4F6] hover:text-[#5E81AC] flex items-center gap-2.5 cursor-pointer font-bold transition-colors"
+                      id="context-menu-open"
+                    >
+                      <Play className="w-4 h-4 text-emerald-600" />
+                      <span>Otwórz</span>
+                    </button>
+
+                    <div className="h-px bg-gray-100 my-1"></div>
+
+                    <button 
+                      onClick={() => {
+                        handleCopy(contextMenu.nodeId!);
+                        setContextMenu(null);
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-[#F3F4F6] hover:text-[#5E81AC] flex items-center justify-between cursor-pointer font-medium transition-colors"
+                      id="context-menu-copy"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Copy className="w-4 h-4 text-blue-500" />
+                        <span>Kopiuj</span>
+                      </div>
+                      <span className="text-[10px] text-gray-400 font-mono">Ctrl+C</span>
+                    </button>
+
+                    <button 
+                      onClick={() => {
+                        handleCut(contextMenu.nodeId!);
+                        setContextMenu(null);
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-[#F3F4F6] hover:text-[#5E81AC] flex items-center justify-between cursor-pointer font-medium transition-colors"
+                      id="context-menu-cut"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Scissors className="w-4 h-4 text-amber-500" />
+                        <span>Wytnij</span>
+                      </div>
+                      <span className="text-[10px] text-gray-400 font-mono">Ctrl+X</span>
+                    </button>
+
+                    <button 
+                      onClick={() => {
+                        const targetId = contextMenu.nodeId!;
+                        setContextMenu(null);
+                        handleOpenRename(targetId);
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-[#F3F4F6] hover:text-[#5E81AC] flex items-center justify-between cursor-pointer font-medium transition-colors"
+                      id="context-menu-rename"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Edit3 className="w-4 h-4 text-indigo-500" />
+                        <span>Zmień nazwę</span>
+                      </div>
+                      <span className="text-[10px] text-gray-400 font-mono">F2</span>
+                    </button>
+
+                    <div className="h-px bg-gray-100 my-1"></div>
+
+                    <button 
+                      onClick={() => {
+                        handleDeleteNode(contextMenu.nodeId!);
+                        setContextMenu(null);
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-red-50 hover:text-red-600 flex items-center justify-between cursor-pointer font-medium transition-colors"
+                      id="context-menu-delete"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                        <span>Usuń (do Kosza)</span>
+                      </div>
+                      <span className="text-[10px] text-gray-400 font-mono">Del</span>
+                    </button>
+                  </>
+                )}
+
+                <div className="h-px bg-gray-100 my-1"></div>
+
                 <button 
                   onClick={() => {
-                    const node = vfs[contextMenu.nodeId];
-                    if (node) handleFolderClick(node);
+                    setPropertiesNodeId(contextMenu.nodeId!);
                     setContextMenu(null);
                   }}
-                  className="w-full text-left px-3 py-1.5 hover:bg-[#F3F4F6] hover:text-[#5E81AC] flex items-center gap-2 cursor-pointer font-medium"
+                  className="w-full text-left px-3 py-1.5 hover:bg-[#F3F4F6] hover:text-[#5E81AC] flex items-center gap-2.5 cursor-pointer font-medium transition-colors"
+                  id="context-menu-properties"
                 >
-                  <Play className="w-3.5 h-3.5 text-emerald-500" />
-                  <span>Otwórz</span>
+                  <Info className="w-4 h-4 text-blue-500" />
+                  <span>Właściwości</span>
                 </button>
+              </>
+            ) : (
+              /* Background Context Menu (PPM na wolnym tle folderu) */
+              <>
+                <div className="px-3 py-1.5 text-[10px] font-bold uppercase text-gray-400 border-b border-gray-100 flex items-center justify-between">
+                  <span className="truncate max-w-[140px] font-medium text-gray-600">{vfs[currentPathId]?.name || 'Ten komputer'}</span>
+                  <span className="text-[9px] text-amber-600 font-mono font-bold bg-amber-50 px-1 py-0.5 rounded">Tło folderu</span>
+                </div>
+
+                {currentPathId === 'kosz' ? (
+                  <>
+                    <button 
+                      disabled={currentChildren.length === 0}
+                      onClick={() => {
+                        handleEmptyTrash();
+                        setContextMenu(null);
+                      }}
+                      className="w-full text-left px-3 py-2 hover:bg-amber-50 hover:text-amber-700 flex items-center gap-2.5 cursor-pointer font-medium disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-gray-700 transition-colors"
+                      id="context-menu-empty-trash"
+                    >
+                      <Trash2 className="w-4 h-4 text-amber-600" />
+                      <span>Opróżnij Kosz</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button 
+                      onClick={() => {
+                        setIsNewFolderOpen(true);
+                        setNewItemName('');
+                        setErrorMsg('');
+                        setContextMenu(null);
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-[#F3F4F6] hover:text-[#5E81AC] flex items-center gap-2.5 cursor-pointer font-medium transition-colors"
+                      id="context-menu-new-folder"
+                    >
+                      <FolderPlus className="w-4 h-4 text-amber-500" />
+                      <span>Nowy folder</span>
+                    </button>
+
+                    <button 
+                      onClick={() => {
+                        setIsNewFileOpen(true);
+                        setNewItemName('');
+                        setErrorMsg('');
+                        setContextMenu(null);
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-[#F3F4F6] hover:text-[#5E81AC] flex items-center gap-2.5 cursor-pointer font-medium transition-colors"
+                      id="context-menu-new-file"
+                    >
+                      <FilePlus className="w-4 h-4 text-blue-500" />
+                      <span>Nowy dokument tekstowy (.txt)</span>
+                    </button>
+
+                    <div className="h-px bg-gray-100 my-1"></div>
+
+                    <button 
+                      disabled={!clipboardNodeId || !clipboardAction}
+                      onClick={() => {
+                        handlePaste();
+                        setContextMenu(null);
+                      }}
+                      className={`w-full text-left px-3 py-1.5 flex items-center justify-between cursor-pointer font-medium transition-colors ${
+                        clipboardNodeId && clipboardAction
+                          ? 'hover:bg-emerald-50 hover:text-emerald-700 text-gray-800'
+                          : 'opacity-40 text-gray-400 cursor-not-allowed'
+                      }`}
+                      id="context-menu-paste"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Clipboard className="w-4 h-4 text-emerald-600" />
+                        <span>
+                          Wklej {clipboardNodeId && vfs[clipboardNodeId] ? `(„${vfs[clipboardNodeId].name}”)` : ''}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-gray-400 font-mono">Ctrl+V</span>
+                    </button>
+
+                    <button 
+                      onClick={() => {
+                        setContextMenu(null);
+                        onAddXP(5);
+                        onActionTriggered('refresh');
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-[#F3F4F6] hover:text-[#5E81AC] flex items-center justify-between cursor-pointer font-medium transition-colors"
+                      id="context-menu-refresh"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <RotateCw className="w-4 h-4 text-gray-500" />
+                        <span>Odśwież</span>
+                      </div>
+                      <span className="text-[10px] text-gray-400 font-mono">F5</span>
+                    </button>
+                  </>
+                )}
+
+                <div className="h-px bg-gray-100 my-1"></div>
+
                 <button 
                   onClick={() => {
-                    setClipboardNodeId(contextMenu.nodeId);
-                    setClipboardAction('cut');
+                    setPropertiesNodeId(currentPathId);
                     setContextMenu(null);
                   }}
-                  className="w-full text-left px-3 py-1.5 hover:bg-[#F3F4F6] hover:text-[#5E81AC] flex items-center gap-2 cursor-pointer font-medium"
+                  className="w-full text-left px-3 py-1.5 hover:bg-[#F3F4F6] hover:text-[#5E81AC] flex items-center gap-2.5 cursor-pointer font-medium transition-colors"
+                  id="context-menu-folder-properties"
                 >
-                  <Scissors className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Wytnij</span>
+                  <Info className="w-4 h-4 text-blue-500" />
+                  <span>Właściwości folderu</span>
                 </button>
               </>
             )}
-            <button 
-              onClick={() => {
-                handleDeleteNode(contextMenu.nodeId);
-                setContextMenu(null);
-              }}
-              className="w-full text-left px-3 py-1.5 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 cursor-pointer font-medium"
-            >
-              <Trash2 className="w-3.5 h-3.5 text-red-500" />
-              <span>{currentPathId === 'kosz' ? 'Usuń trwale' : 'Usuń'}</span>
-            </button>
-            <div className="h-px bg-gray-100 my-1"></div>
-            <button 
-              onClick={() => {
-                setPropertiesNodeId(contextMenu.nodeId);
-                setContextMenu(null);
-              }}
-              className="w-full text-left px-3 py-1.5 hover:bg-[#F3F4F6] hover:text-[#5E81AC] flex items-center gap-2 cursor-pointer font-medium"
-              id="context-menu-properties"
-            >
-              <Info className="w-3.5 h-3.5 text-blue-500" />
-              <span>Właściwości</span>
-            </button>
           </div>
         </>
       )}
