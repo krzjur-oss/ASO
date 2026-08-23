@@ -126,8 +126,15 @@ export default function App() {
     window.addEventListener('appinstalled', handleAppInstalled);
 
     // Check if app is already running in standalone (PWA) mode
-    if (window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone) {
-      setIsInstalled(true);
+    try {
+      if (
+        (typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches) || 
+        (typeof navigator !== 'undefined' && (navigator as any).standalone)
+      ) {
+        setIsInstalled(true);
+      }
+    } catch (e) {
+      // Ignored in restricted environments
     }
 
     return () => {
@@ -1395,9 +1402,21 @@ export default function App() {
 
       {/* FIRST RUN TERMS & LICENSE MODAL */}
       {showFirstRunModal && (
-        <div className="fixed inset-0 bg-[#2E3440]/85 backdrop-blur-md flex items-center justify-center p-4 z-[9999] select-none overflow-hidden animate-fadeIn">
-          <div className="bg-[#F8FAFC] rounded-3xl max-w-3xl w-full max-h-[90vh] shadow-2xl border border-white flex flex-col overflow-hidden text-[#2E3440] animate-scaleUp">
+        <div className="fixed inset-0 bg-[#2E3440]/85 backdrop-blur-md flex items-center justify-center p-4 z-[9999] select-none overflow-hidden animate-fadeIn" onClick={() => setShowFirstRunModal(false)}>
+          <div className="bg-[#F8FAFC] rounded-3xl max-w-3xl w-full max-h-[90vh] shadow-2xl border border-white flex flex-col overflow-hidden text-[#2E3440] animate-scaleUp relative" onClick={(e) => e.stopPropagation()}>
             
+            {/* Quick close button */}
+            <button
+              onClick={() => {
+                safeStorage.setItem('edu_terms_accepted', 'true');
+                setShowFirstRunModal(false);
+              }}
+              className="absolute top-4 right-4 text-gray-400 hover:text-[#2E3440] hover:bg-gray-200/60 p-2 rounded-full transition-colors cursor-pointer z-10"
+              title="Zamknij"
+            >
+              ✕
+            </button>
+
             {/* Modal Header */}
             <div className="bg-[#ECEFF4] border-b border-[#D8DEE9] px-6 py-5 text-center">
               <span className="text-4xl block mb-2 animate-bounce">🎓</span>

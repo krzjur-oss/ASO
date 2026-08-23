@@ -18,26 +18,6 @@
   <body class="bg-[#E5E9F0] text-[#2E3440] antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-
-    <!-- Defensive Service Worker & Cache cleanup for smooth preview -->
-    <script>
-      try {
-        if ('serviceWorker' in navigator && navigator.serviceWorker.getRegistrations) {
-          navigator.serviceWorker.getRegistrations().then(function(registrations) {
-            for (var i = 0; i < registrations.length; i++) {
-              registrations[i].unregister().catch(function() {});
-            }
-          }).catch(function() {});
-        }
-        if ('caches' in window && window.caches.keys) {
-          caches.keys().then(function(names) {
-            for (var i = 0; i < names.length; i++) {
-              caches.delete(names[i]).catch(function() {});
-            }
-          }).catch(function() {});
-        }
-      } catch (err) {}
-    </script>
   </body>
 </html>
 

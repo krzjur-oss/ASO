@@ -15,7 +15,6 @@ import {
   Trash,
   Trash2, 
   Edit3, 
-  ChevronRight,
   HardDrive,
   Monitor,
   File,
@@ -2188,7 +2187,7 @@ export default function WindowsExplorer({
       {contextMenu && (
         <>
           <div 
-            className="fixed inset-0 z-45 bg-transparent" 
+            className="fixed inset-0 z-[45] bg-transparent" 
             onClick={() => setContextMenu(null)}
             onContextMenu={(e) => {
               e.preventDefault();
@@ -2198,8 +2197,8 @@ export default function WindowsExplorer({
           <div 
             className="fixed z-50 bg-white/95 backdrop-blur-md border border-[#D8DEE9] rounded-2xl shadow-2xl py-1.5 min-w-[210px] text-xs text-gray-700 animate-fadeIn ring-1 ring-black/5 select-none"
             style={{ 
-              top: Math.min(contextMenu.y, window.innerHeight - 280), 
-              left: Math.min(contextMenu.x, window.innerWidth - 230) 
+              top: Math.max(10, Math.min(contextMenu.y, (typeof window !== 'undefined' ? window.innerHeight : 600) - 290)), 
+              left: Math.max(10, Math.min(contextMenu.x, (typeof window !== 'undefined' ? window.innerWidth : 800) - 240)) 
             }}
             id="explorer-context-menu"
             onClick={(e) => e.stopPropagation()}

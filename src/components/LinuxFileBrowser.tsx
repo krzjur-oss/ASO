@@ -596,7 +596,7 @@ export default function LinuxFileBrowser({
       {contextMenu && (
         <>
           <div 
-            className="fixed inset-0 z-45 bg-transparent" 
+            className="fixed inset-0 z-[45] bg-transparent" 
             onClick={() => setContextMenu(null)}
             onContextMenu={(e) => {
               e.preventDefault();
@@ -606,8 +606,8 @@ export default function LinuxFileBrowser({
           <div 
             className="fixed z-50 bg-[#2c1a24]/95 backdrop-blur-md border border-[#4a2e3f] rounded-2xl shadow-2xl py-1.5 min-w-[210px] text-xs text-gray-200 animate-fadeIn ring-1 ring-black/40 select-none"
             style={{ 
-              top: Math.min(contextMenu.y, window.innerHeight - 280), 
-              left: Math.min(contextMenu.x, window.innerWidth - 230) 
+              top: Math.max(10, Math.min(contextMenu.y, (typeof window !== 'undefined' ? window.innerHeight : 600) - 290)), 
+              left: Math.max(10, Math.min(contextMenu.x, (typeof window !== 'undefined' ? window.innerWidth : 800) - 240)) 
             }}
             id="linux-context-menu"
             onClick={(e) => e.stopPropagation()}
