@@ -653,7 +653,7 @@ export default function App() {
 
           {/* 2. Windows Explorer */}
           {activeTab === 'windows' && (
-            <div className="animate-fadeIn">
+            <div className="animate-fadeIn" key="tab-windows-view">
               {/* Optional Active Mission Notice */}
               {trackedMission && trackedMission.category === 'windows' && (
                 <div className="bg-white rounded-2xl border border-white text-[#2E3440] p-3.5 mb-4 text-xs font-semibold flex items-center justify-between shadow-sm">
@@ -662,9 +662,10 @@ export default function App() {
                 </div>
               )}
               <WindowsExplorer 
-                vfs={windowsVfs}
+                key={`win-${activeMissionId || 'sandbox'}-${Object.keys(windowsVfs || {}).length}`}
+                vfs={windowsVfs && Object.keys(windowsVfs).length > 0 ? windowsVfs : createDefaultWindowsVFS()}
                 setVfs={setWindowsVfs}
-                currentPathId={windowsPathId}
+                currentPathId={windowsPathId || 'root'}
                 setCurrentPathId={changeWindowsPathId}
                 onAddXP={handleAddXP}
                 onActionTriggered={handleVerifyActiveMission}
@@ -677,7 +678,7 @@ export default function App() {
 
           {/* 3. Linux Terminal */}
           {activeTab === 'linux' && (
-            <div className="animate-fadeIn">
+            <div className="animate-fadeIn" key="tab-linux-view">
               {/* Optional Active Mission Notice */}
               {trackedMission && trackedMission.category === 'linux' && (
                 <div className="bg-white rounded-2xl border border-white text-[#2E3440] p-3.5 mb-4 text-xs font-semibold flex items-center justify-between shadow-sm">
@@ -686,9 +687,10 @@ export default function App() {
                 </div>
               )}
               <LinuxTerminal 
-                vfs={linuxVfs}
+                key={`linux-${activeMissionId || 'sandbox'}-${Object.keys(linuxVfs || {}).length}`}
+                vfs={linuxVfs && Object.keys(linuxVfs).length > 0 ? linuxVfs : createDefaultLinuxVFS()}
                 setVfs={setLinuxVfs}
-                currentPathId={linuxPathId}
+                currentPathId={linuxPathId || 'uczen'}
                 setCurrentPathId={changeLinuxPathId}
                 onAddXP={handleAddXP}
                 onActionTriggered={handleVerifyActiveMission}

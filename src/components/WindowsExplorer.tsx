@@ -39,7 +39,8 @@ import {
   generateId, 
   getCurrentDateString,
   nodeExists,
-  getPathNodes
+  getPathNodes,
+  createDefaultWindowsVFS
 } from '../utils/fileSystem';
 import DirectoryTreeVisualizer from './DirectoryTreeVisualizer';
 import WindowsCMD from './WindowsCMD';
@@ -47,28 +48,32 @@ import WindowsNotepad from './WindowsNotepad';
 import { Tooltip } from './Tooltip';
 
 interface WindowsExplorerProps {
-  vfs: Record<string, VFSNode>;
+  key?: React.Key;
+  vfs?: Record<string, VFSNode>;
   setVfs: React.Dispatch<React.SetStateAction<Record<string, VFSNode>>>;
-  currentPathId: string;
-  setCurrentPathId: (id: string) => void;
-  onAddXP: (points: number) => void;
-  onActionTriggered: (action?: string) => void;
+  currentPathId?: string;
+  setCurrentPathId: (id: string | ((prev: string) => string)) => void;
+  onAddXP?: (points: number) => void;
+  onActionTriggered?: (action?: string) => void;
   isChallengeActive?: boolean;
   challengeTimeLeft?: number;
   activeMissionId?: string | null;
 }
 
 export default function WindowsExplorer({ 
-  vfs, 
+  vfs = createDefaultWindowsVFS(), 
   setVfs, 
-  currentPathId, 
+  currentPathId = 'root', 
   setCurrentPathId, 
-  onAddXP,
-  onActionTriggered,
-  isChallengeActive,
-  challengeTimeLeft,
-  activeMissionId
+  onAddXP = () => {},
+  onActionTriggered = () => {},
+  isChallengeActive = false,
+  challengeTimeLeft = 0,
+  activeMissionId = null
 }: WindowsExplorerProps) {
+  // Ensure we always operate on a valid VFS dictionary
+  const safeVfs = (vfs && typeof vfs === 'object' && Object.keys(vfs).length > 0) ? vfs : createDefaultWindowsVFS();
+  const safePathId = (currentPathId && safeVfs[currentPathId]) ? currentPathId : 'root';
   
   // OS Simulator States
   const [activeApp, setActiveApp] = useState<'explorer' | 'cmd' | 'notepad' | null>('explorer');
@@ -78,6 +83,13 @@ export default function WindowsExplorer({
 
   // Dynamic ticking clock state
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Force sync / self-heal if currentPathId is invalid
+  useEffect(() => {
+    if (!safeVfs[currentPathId]) {
+      setCurrentPathId('root');
+    }
+  }, [currentPathId, safeVfs, setCurrentPathId]);
 
   useEffect(() => {
     const timer = setInterval(() => {

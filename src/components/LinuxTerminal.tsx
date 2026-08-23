@@ -23,41 +23,53 @@ import {
   generateId, 
   getCurrentDateString,
   nodeExists,
-  getPathNodes
+  getPathNodes,
+  createDefaultLinuxVFS
 } from '../utils/fileSystem';
 import DirectoryTreeVisualizer from './DirectoryTreeVisualizer';
 import LinuxFileBrowser from './LinuxFileBrowser';
 import LinuxNotepad from './LinuxNotepad';
 
 interface LinuxTerminalProps {
-  vfs: Record<string, VFSNode>;
+  key?: React.Key;
+  vfs?: Record<string, VFSNode>;
   setVfs: React.Dispatch<React.SetStateAction<Record<string, VFSNode>>>;
-  currentPathId: string;
-  setCurrentPathId: (id: string) => void;
-  onAddXP: (points: number) => void;
-  onActionTriggered: (command?: string) => void;
+  currentPathId?: string;
+  setCurrentPathId: (id: string | ((prev: string) => string)) => void;
+  onAddXP?: (points: number) => void;
+  onActionTriggered?: (command?: string) => void;
   isChallengeActive?: boolean;
   challengeTimeLeft?: number;
   activeMissionId?: string | null;
 }
 
 export default function LinuxTerminal({
-  vfs,
+  vfs = createDefaultLinuxVFS(),
   setVfs,
-  currentPathId,
+  currentPathId = 'uczen',
   setCurrentPathId,
-  onAddXP,
-  onActionTriggered,
-  isChallengeActive,
-  challengeTimeLeft,
-  activeMissionId
+  onAddXP = () => {},
+  onActionTriggered = () => {},
+  isChallengeActive = false,
+  challengeTimeLeft = 0,
+  activeMissionId = null
 }: LinuxTerminalProps) {
+  // Ensure we always operate on a valid VFS dictionary
+  const safeVfs = (vfs && typeof vfs === 'object' && Object.keys(vfs).length > 0) ? vfs : createDefaultLinuxVFS();
+  const safePathId = (currentPathId && safeVfs[currentPathId]) ? currentPathId : 'uczen';
   
   // OS Simulator States for Linux
   const [activeApp, setActiveApp] = useState<'terminal' | 'browser' | 'gedit' | null>('terminal');
   const [openApps, setOpenApps] = useState<string[]>(['terminal']);
   const [activeGeditFileId, setActiveGeditFileId] = useState<string | null>(null);
   const [showApplicationsMenu, setShowApplicationsMenu] = useState(false);
+
+  // Force sync / self-heal if currentPathId is invalid
+  useEffect(() => {
+    if (!safeVfs[currentPathId]) {
+      setCurrentPathId('uczen');
+    }
+  }, [currentPathId, safeVfs, setCurrentPathId]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   // Dynamic ticking clock state
