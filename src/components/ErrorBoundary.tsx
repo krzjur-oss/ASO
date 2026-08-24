@@ -1,4 +1,4 @@
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { safeStorage } from '../utils/storage';
 
 interface ErrorBoundaryProps {
@@ -10,12 +10,14 @@ interface ErrorBoundaryState {
   error?: Error | null;
 }
 
-export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  public declare props: Readonly<ErrorBoundaryProps>;
-  public state: ErrorBoundaryState = {
-    hasError: false,
-    error: null
-  };
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: null
+    };
+  }
 
   public static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error };
@@ -27,7 +29,13 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
   private handleReset = () => {
     safeStorage.clear();
-    window.location.reload();
+    try {
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
+    } catch (e) {
+      // ignore
+    }
   };
 
   public render() {
@@ -44,7 +52,13 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
             </p>
             <div className="flex gap-3 justify-center">
               <button
-                onClick={() => window.location.reload()}
+                onClick={() => {
+                  try {
+                    window.location.reload();
+                  } catch (e) {
+                    this.setState({ hasError: false, error: null });
+                  }
+                }}
                 className="px-5 py-2.5 bg-[#5E81AC] hover:bg-[#81A1C1] text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
               >
                 Odśwież stronę
@@ -64,3 +78,4 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     return this.props.children;
   }
 }
+
