@@ -111,11 +111,32 @@ export const BADGES: Badge[] = [
     requirement: 'Ukończenie Misji 18'
   },
   {
+    id: 'badge_win_del_files',
+    title: 'Pogromca Śmieci',
+    description: 'Pomyślnie oczyszczono folder z niepotrzebnych plików tymczasowych i logów.',
+    icon: '🧹',
+    requirement: 'Ukończenie Misji 19'
+  },
+  {
+    id: 'badge_linux_chown',
+    title: 'Zarządca Własności',
+    description: 'Opanowano przydzielanie praw własności do plików za pomocą komendy chown w Linux.',
+    icon: '👑',
+    requirement: 'Ukończenie Misji 20'
+  },
+  {
+    id: 'badge_search_ext',
+    title: 'Mistrz Rozszerzeń',
+    description: 'Wyszukano dokumenty w całym systemie filtrując je po rozszerzeniu pliku.',
+    icon: '🔍',
+    requirement: 'Ukończenie Misji 21'
+  },
+  {
     id: 'badge_master',
     title: 'Certyfikowany Administrator',
     description: 'Ukończono wszystkie praktyczne wyzwania z Windows i Linux.',
     icon: '🏆',
-    requirement: 'Ukończenie wszystkich 18 misji'
+    requirement: 'Ukończenie wszystkich 21 misji'
   }
 ];
 
@@ -869,5 +890,235 @@ export const MISSIONS: Mission[] = [
       };
     },
     successMessage: 'Świetnie! Linia poleceń Linuxa zakłada, że administrator wie, co robi. Komenda rm nie przenosi plików do żadnego kosza — usuwa je od razu i na stałe. Zawsze używaj rm z dużą ostrożnością!'
+  },
+  {
+    id: 'm19_win_delete_files',
+    title: 'Misja 19: Usuwanie zbędnych plików (Windows)',
+    category: 'windows',
+    difficulty: 'Średni',
+    description: 'W systemie Windows gromadzenie zbędnych plików tymczasowych oraz starych logów zaśmieca przestrzeń dyskową. Twoim zadaniem jest przejść do folderu „Pobrane” i usunąć niepotrzebne pliki: „instalator_stary.tmp” oraz „bledy_instalacji.log”, pozostawiając ważny dokument „Wazna_umowa.pdf” nienaruszony.',
+    instructions: [
+      'Upewnij się, że jesteś w Eksploratorze Windows i przejdź do folderu „Pobrane”.',
+      'Zaznacz plik tymczasowy „instalator_stary.tmp” i usuń go (klikając przycisk „Usuń” w menu głównym lub używając klawisza Delete).',
+      'Następnie zaznacz plik dziennika „bledy_instalacji.log” i również go usuń.',
+      'Upewnij się, że ważny plik „Wazna_umowa.pdf” pozostał bezpieczny w folderze!'
+    ],
+    points: 50,
+    initialState: {
+      system: 'windows',
+      currentPathId: 'pobrane',
+      nodes: {
+        ...createDefaultWindowsVFS(),
+        'instalator_stary_tmp': {
+          id: 'instalator_stary_tmp',
+          name: 'instalator_stary.tmp',
+          type: 'file',
+          parentId: 'pobrane',
+          content: 'Tymczasowe pliki instalatora gry...',
+          createdAt: '2026-07-20 14:10',
+          size: '124 MB'
+        },
+        'bledy_instalacji_log': {
+          id: 'bledy_instalacji_log',
+          name: 'bledy_instalacji.log',
+          type: 'file',
+          parentId: 'pobrane',
+          content: '[LOG 2026-07-20] Nieudana próba instalacji biblioteki.',
+          createdAt: '2026-07-20 14:12',
+          size: '18 KB'
+        },
+        'wazna_umowa_pdf': {
+          id: 'wazna_umowa_pdf',
+          name: 'Wazna_umowa.pdf',
+          type: 'file',
+          parentId: 'pobrane',
+          content: '[DOKUMENT PDF] Umowa gwarancyjna sprzętu komputerowego.',
+          createdAt: '2026-07-21 09:30',
+          size: '1.4 MB'
+        }
+      }
+    },
+    checkCompleted: (nodes, currentPathId, commandHistory) => {
+      const history = commandHistory || [];
+      const hasDeletedTmp = history.includes('delete:instalator_stary_tmp') || !nodes['instalator_stary_tmp'] || nodes['instalator_stary_tmp'].parentId === 'kosz' || nodes['instalator_stary_tmp'].parentId !== 'pobrane';
+      const hasDeletedLog = history.includes('delete:bledy_instalacji_log') || !nodes['bledy_instalacji_log'] || nodes['bledy_instalacji_log'].parentId === 'kosz' || nodes['bledy_instalacji_log'].parentId !== 'pobrane';
+      const keepPdf = nodes['wazna_umowa_pdf'] && nodes['wazna_umowa_pdf'].parentId === 'pobrane';
+
+      if (hasDeletedTmp && hasDeletedLog && keepPdf) {
+        return {
+          completed: true,
+          progressText: 'Brawo! Pomyślnie usunąłeś zbędne pliki instalator_stary.tmp i bledy_instalacji.log, zachowując ważny plik Wazna_umowa.pdf.'
+        };
+      } else if (!keepPdf) {
+        return {
+          completed: false,
+          progressText: 'Uwaga! Usunąłeś ważny plik "Wazna_umowa.pdf". Przywróć go z Kosza lub zresetuj misję.'
+        };
+      } else if (hasDeletedTmp && !hasDeletedLog) {
+        return {
+          completed: false,
+          progressText: 'Dobrze! Usunąłeś instalator_stary.tmp. Teraz zaznacz i usuń plik dziennika "bledy_instalacji.log".'
+        };
+      } else if (!hasDeletedTmp && hasDeletedLog) {
+        return {
+          completed: false,
+          progressText: 'Dobrze! Usunąłeś bledy_instalacji.log. Teraz zaznacz i usuń plik tymczasowy "instalator_stary.tmp".'
+        };
+      }
+
+      return {
+        completed: false,
+        progressText: 'Przejdź do folderu Pobrane i usuń pliki "instalator_stary.tmp" oraz "bledy_instalacji.log".'
+      };
+    },
+    successMessage: 'Świetna robota! Regularne czyszczenie plików tymczasowych (.tmp) oraz starych dzienników (.log) pozwala odzyskać cenne gigabajty na dysku i utrzymać porządek w systemie operacyjnym.'
+  },
+  {
+    id: 'm20_linux_chown',
+    title: 'Misja 20: Zmiana właściciela pliku – chown (Linux)',
+    category: 'linux',
+    difficulty: 'Średni',
+    description: 'W systemie Linux każdy plik i folder ma przypisanego właściciela (użytkownika) oraz grupę. Jako administrator musisz przekazać własność kluczowego skryptu systemowego „skrypt_sieciowy.sh” użytkownikowi „root” za pomocą polecenia chown.',
+    instructions: [
+      'Przełącz się do zakładki "Terminal Linux".',
+      'Wpisz polecenie „ls -l”, aby wyświetlić szczegółowe informacje o plikach, w tym ich właściciela (kolumna obok uprawnień).',
+      'Wpisz polecenie „chown root skrypt_sieciowy.sh” (lub „sudo chown root skrypt_sieciowy.sh”), aby zmienić właściciela pliku na root.',
+      'Wpisz ponownie „ls -l”, aby sprawdzić, czy użytkownik root stał się nowym właścicielem pliku.'
+    ],
+    points: 50,
+    initialState: {
+      system: 'linux',
+      currentPathId: 'uczen',
+      nodes: {
+        ...createDefaultLinuxVFS(),
+        'skrypt_sieciowy_sh': {
+          id: 'skrypt_sieciowy_sh',
+          name: 'skrypt_sieciowy.sh',
+          type: 'file',
+          parentId: 'uczen',
+          permissions: '755',
+          owner: 'uczen',
+          group: 'uczen',
+          content: '#!/bin/bash\necho "Konfiguracja interfejsu sieciowego eth0..."\nsystemctl restart networking',
+          createdAt: '2026-07-22 11:00',
+          size: '340 B'
+        }
+      }
+    },
+    checkCompleted: (nodes, currentPathId, commandHistory) => {
+      const history = commandHistory || [];
+      const node = nodes['skrypt_sieciowy_sh'] || Object.values(nodes).find(n => n.name === 'skrypt_sieciowy.sh');
+      const isOwnerRoot = node && node.owner === 'root';
+      const hasChownCmd = history.some(cmd => {
+        const norm = cmd.toLowerCase().trim().replace(/\s+/g, ' ');
+        return norm.startsWith('chown ') || norm.startsWith('sudo chown ');
+      });
+
+      if (isOwnerRoot) {
+        return {
+          completed: true,
+          progressText: 'Znakomicie! Zmieniłeś właściciela skryptu skrypt_sieciowy.sh na użytkownika root.'
+        };
+      } else if (hasChownCmd) {
+        return {
+          completed: false,
+          progressText: 'Wpisałeś polecenie chown, ale upewnij się, że podałeś poprawnego właściciela i plik: chown root skrypt_sieciowy.sh'
+        };
+      }
+
+      return {
+        completed: false,
+        progressText: 'Wpisz polecenie: chown root skrypt_sieciowy.sh, aby przekazać własność pliku administratorowi.'
+      };
+    },
+    successMessage: 'Doskonale! Polecenie chown (change owner) jest fundamentem bezpieczeństwa i administracji w środowisku Linux. Pozwala administratorowi (root) kontrolować, które procesy i użytkownicy mają prawo zarządzać poszczególnymi plikami i usługami systemowymi.'
+  },
+  {
+    id: 'm21_search_by_extension',
+    title: 'Misja 21: Wyszukiwanie plików po rozszerzeniu (*.pdf / *.log)',
+    category: 'windows',
+    difficulty: 'Średni',
+    description: 'Gdy na dysku znajduje się mnóstwo katalogów i podkatalogów, ręczne szukanie konkretnych typów dokumentów jest czasochłonne. Wykorzystaj wyszukiwanie z użyciem filtra rozszerzenia (*.pdf lub .pdf), aby odnaleźć i zaznaczyć zagubiony raport w formacie PDF.',
+    instructions: [
+      'Otwórz Eksplorator Windows.',
+      'W polu wyszukiwania w prawym górnym rogu wpisz „*.pdf” (lub „.pdf”), aby wyświetlić wszystkie pliki PDF w całym systemie.',
+      'Zobacz, jak wyszukiwarka natychmiast filtruje pliki wyłącznie o tym rozszerzeniu z różnych folderów.',
+      'Kliknij lewym przyciskiem myszy na odnaleziony plik „Raport_Finansowy_2026.pdf”, aby go zaznaczyć.'
+    ],
+    points: 50,
+    initialState: {
+      system: 'windows',
+      currentPathId: 'root',
+      nodes: {
+        ...createDefaultWindowsVFS(),
+        'projekty_archiwum_folder': {
+          id: 'projekty_archiwum_folder',
+          name: 'Archiwum_Projektow',
+          type: 'directory',
+          parentId: 'dokumenty',
+          createdAt: '2026-07-10 09:00',
+          size: 'Folder'
+        },
+        'raport_finansowy_pdf': {
+          id: 'raport_finansowy_pdf',
+          name: 'Raport_Finansowy_2026.pdf',
+          type: 'file',
+          parentId: 'projekty_archiwum_folder',
+          content: '[DOKUMENT PDF] Roczny bilans finansowy projektu szkolnego. Wszystkie wskaźniki na zielono.',
+          createdAt: '2026-07-10 09:15',
+          size: '3.2 MB'
+        },
+        'specyfikacja_pdf': {
+          id: 'specyfikacja_pdf',
+          name: 'Specyfikacja_Techniczna.pdf',
+          type: 'file',
+          parentId: 'pobrane',
+          content: '[DOKUMENT PDF] Specyfikacja techniczna infrastruktury serwerowej.',
+          createdAt: '2026-07-12 14:20',
+          size: '820 KB'
+        },
+        'log_systemu_txt': {
+          id: 'log_systemu_txt',
+          name: 'log_systemu.txt',
+          type: 'file',
+          parentId: 'dokumenty',
+          content: 'Zapis zdarzeń systemowych.',
+          createdAt: '2026-07-12 15:00',
+          size: '14 KB'
+        }
+      }
+    },
+    checkCompleted: (nodes, currentPathId, commandHistory) => {
+      const history = commandHistory || [];
+      const hasSearchedPdf = history.some(action => 
+        action.startsWith('search:') && (
+          action.includes('.pdf') || 
+          action.includes('*.pdf') || 
+          action.includes('pdf')
+        )
+      );
+      const hasSelectedRaport = history.some(action => 
+        action === 'select:raport_finansowy_pdf' || 
+        action.includes('raport_finansowy')
+      );
+
+      if (hasSearchedPdf && hasSelectedRaport) {
+        return {
+          completed: true,
+          progressText: 'Świetnie! Wyszukałeś pliki po rozszerzeniu PDF i zaznaczyłeś Raport_Finansowy_2026.pdf.'
+        };
+      } else if (hasSearchedPdf) {
+        return {
+          completed: false,
+          progressText: 'Bardzo dobrze! Wpisałeś filtr rozszerzenia. Teraz kliknij lewym przyciskiem myszy na znaleziony plik "Raport_Finansowy_2026.pdf", aby go zaznaczyć.'
+        };
+      }
+
+      return {
+        completed: false,
+        progressText: 'Wpisz "*.pdf" lub ".pdf" w pole wyszukiwania u góry, a następnie zaznacz plik "Raport_Finansowy_2026.pdf".'
+      };
+    },
+    successMessage: 'Wspaniale! Filtrowanie plików po rozszerzeniu (*.pdf, *.docx, *.jpg, *.log) to niesamowicie przydatna umiejętność. Pozwala wyodrębnić tylko te pliki, których w danej chwili potrzebujesz, bez konieczności pamiętania ich pełnych nazw.'
   }
 ];

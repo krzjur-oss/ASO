@@ -173,6 +173,9 @@ export default function MissionsSection({
               if (badge.id === 'badge_win_search' && completedMissionIds.includes('m16_win_search')) isUnlocked = true;
               if (badge.id === 'badge_win_recycle_bin' && completedMissionIds.includes('m17_win_recycle_bin')) isUnlocked = true;
               if (badge.id === 'badge_linux_rm_perm' && completedMissionIds.includes('m18_linux_rm_perm')) isUnlocked = true;
+              if (badge.id === 'badge_win_del_files' && completedMissionIds.includes('m19_win_delete_files')) isUnlocked = true;
+              if (badge.id === 'badge_linux_chown' && completedMissionIds.includes('m20_linux_chown')) isUnlocked = true;
+              if (badge.id === 'badge_search_ext' && completedMissionIds.includes('m21_search_by_extension')) isUnlocked = true;
               
               // Master badge is unlocked if all missions are completed
               const hasAllMissions = MISSIONS.every(m => completedMissionIds.includes(m.id));

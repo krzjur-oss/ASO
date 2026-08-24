@@ -354,6 +354,45 @@ export default function WindowsExplorer({
         break;
       }
 
+      case 'm19_win_delete_files': {
+        if (currentPathId !== 'pobrane') {
+          targetId = 'sidebar-link-pobrane';
+          message = 'Przejdź do folderu „Pobrane” w lewym panelu.';
+        } else if (vfs['instalator_stary_tmp'] && vfs['instalator_stary_tmp'].parentId === 'pobrane') {
+          if (selectedNodeId !== 'instalator_stary_tmp') {
+            targetId = 'explorer-item-instalator_stary_tmp';
+            message = 'Zaznacz zbędny plik „instalator_stary.tmp”.';
+          } else {
+            targetId = 'btn-delete-file';
+            message = 'Kliknij przycisk „Usuń” (czerwony kosz), aby usunąć plik.';
+          }
+        } else if (vfs['bledy_instalacji_log'] && vfs['bledy_instalacji_log'].parentId === 'pobrane') {
+          if (selectedNodeId !== 'bledy_instalacji_log') {
+            targetId = 'explorer-item-bledy_instalacji_log';
+            message = 'Zaznacz plik dziennika „bledy_instalacji.log”.';
+          } else {
+            targetId = 'btn-delete-file';
+            message = 'Kliknij przycisk „Usuń”, aby usunąć ten zbędny plik logów.';
+          }
+        }
+        break;
+      }
+
+      case 'm21_search_by_extension': {
+        const queryLower = searchQuery.toLowerCase().trim();
+        if (!queryLower.includes('pdf')) {
+          targetId = 'explorer-search-input';
+          message = 'Wpisz „*.pdf” (lub „.pdf”) w polu wyszukiwania u góry.';
+        } else {
+          const targetFile = Object.values(vfs).find(n => n.name === 'Raport_Finansowy_2026.pdf');
+          if (targetFile && selectedNodeId !== targetFile.id) {
+            targetId = `explorer-item-${targetFile.id}`;
+            message = 'Kliknij lewym przyciskiem myszy na plik „Raport_Finansowy_2026.pdf”, aby go zaznaczyć.';
+          }
+        }
+        break;
+      }
+
       default:
         targetId = 'btn-windows-hint';
         message = 'To zadanie wykonaj w terminalu Linux';
@@ -881,7 +920,12 @@ export default function WindowsExplorer({
   // Fetch active directory items or search results
   const rawChildren = searchQuery.trim() !== ''
     ? Object.values(vfs).filter(node => {
-        const matchesSearch = node.parentId !== null && node.name.toLowerCase().includes(searchQuery.toLowerCase());
+        const queryClean = searchQuery.trim().toLowerCase().replace(/^\*/, '');
+        const nodeNameLower = node.name.toLowerCase();
+        const matchesSearch = node.parentId !== null && (
+          nodeNameLower.includes(queryClean) || 
+          nodeNameLower.endsWith(queryClean)
+        );
         if (!matchesSearch) return false;
         
         const inTrash = isNodeInTrash(node.id);

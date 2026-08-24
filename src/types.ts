@@ -12,6 +12,8 @@ export interface VFSNode {
   createdAt: string;
   size?: string; // Friendly file size e.g. "4 KB" or "Folder"
   permissions?: string; // Permissions for Linux (e.g. "rw-r--r--", "755", etc.)
+  owner?: string; // Owner for Linux (e.g. "uczen", "root")
+  group?: string; // Group for Linux (e.g. "uczen", "root")
   originalParentId?: string | null; // For Recycle Bin (Kosz) restore capability
 }
 

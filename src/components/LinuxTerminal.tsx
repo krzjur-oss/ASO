@@ -190,6 +190,9 @@ export default function LinuxTerminal({
           message = 'Wpisz polecenie „rm welcome.txt”';
         }
         break;
+      case 'm20_linux_chown':
+        message = 'Wpisz polecenie „chown root skrypt_sieciowy.sh” (lub „sudo chown root skrypt_sieciowy.sh”)';
+        break;
       default:
         targetId = 'btn-linux-hint';
         message = 'To zadanie wykonaj w systemie Windows';
@@ -258,8 +261,12 @@ export default function LinuxTerminal({
     };
     
     const parts = trimmed.split(/\s+/);
-    const command = parts[0].toLowerCase();
-    const args = parts.slice(1);
+    let effectiveParts = parts;
+    if (effectiveParts[0]?.toLowerCase() === 'sudo' && effectiveParts.length > 1) {
+      effectiveParts = effectiveParts.slice(1);
+    }
+    const command = effectiveParts[0]?.toLowerCase() || '';
+    const args = effectiveParts.slice(1);
 
     let outputs: TerminalLine[] = [];
 
@@ -277,7 +284,9 @@ export default function LinuxTerminal({
           { text: '  rm [nazwa]      - Usuwa plik tekstowy (np. rm notatka.txt)', type: 'output', timestamp: getCurrentDateString() },
           { text: '  cat [nazwa]     - Wyświetla zawartość pliku na ekranie (np. cat welcome.txt)', type: 'output', timestamp: getCurrentDateString() },
           { text: '  grep [wzór] [f] - Wyszukuje tekst wewnątrz pliku (np. grep haslo raport.txt)', type: 'output', timestamp: getCurrentDateString() },
-          { text: '  chmod [uprawnia] [plik] - Zmienia uprawnienia (np. chmod 600 tajne.txt lub chmod +x gra.py)', type: 'output', timestamp: getCurrentDateString() },
+          { text: '  chmod [upraw] [f] - Zmienia uprawnienia (np. chmod 600 tajne.txt lub chmod +x gra.py)', type: 'output', timestamp: getCurrentDateString() },
+          { text: '  chown [user] [f] - Zmienia właściciela pliku (np. chown root skrypt.sh)', type: 'output', timestamp: getCurrentDateString() },
+          { text: '  find -name [wzór] - Wyszukuje pliki po nazwie/rozszerzeniu (np. find -name "*.pdf")', type: 'output', timestamp: getCurrentDateString() },
           { text: '  clear           - Czyści ekran konsoli', type: 'output', timestamp: getCurrentDateString() },
         ];
         onAddXP(5);
@@ -313,6 +322,8 @@ export default function LinuxTerminal({
             const perms = formatPermissions(child);
             const size = child.type === 'directory' ? '4096' : (child.size || '100 B');
             const date = child.createdAt || '2026-07-15 10:00';
+            const ownerStr = (child.owner || 'uczen').padEnd(6);
+            const groupStr = (child.group || 'uczen').padEnd(6);
             
             const isExec = child.permissions === '755' || child.permissions === '+x';
             let nameStr = child.name;
@@ -322,7 +333,7 @@ export default function LinuxTerminal({
               nameStr = `\x1b[32m${child.name}\x1b[0m*`;
             }
 
-            return `${perms}  1 uczen uczen  ${size.padEnd(6)} ${date}  ${nameStr}`;
+            return `${perms}  1 ${ownerStr} ${groupStr}  ${size.padEnd(6)} ${date}  ${nameStr}`;
           });
 
           outputs = lines.map(line => ({ text: line, type: 'output', timestamp: getCurrentDateString() }));
@@ -632,6 +643,72 @@ export default function LinuxTerminal({
           }
         } else {
           outputs = [{ text: `grep: błąd: plik "${fileArg}" nie istnieje!`, type: 'error', timestamp: getCurrentDateString() }];
+        }
+        break;
+      }
+
+      case 'chown': {
+        const ownerArg = args[0];
+        const fileArg = args[1];
+        if (!ownerArg || !fileArg) {
+          outputs = [{ text: 'chown: brakujące argumenty (użycie: chown [właściciel][:grupa] [plik], np. chown root skrypt_sieciowy.sh)', type: 'error', timestamp: getCurrentDateString() }];
+          break;
+        }
+
+        const children = getChildren(vfs, currentPathId);
+        const target = children.find(child => child.name === fileArg);
+
+        if (!target) {
+          outputs = [{ text: `chown: błąd: brak dostępu do "${fileArg}": Nie ma takiego pliku ani katalogu!`, type: 'error', timestamp: getCurrentDateString() }];
+        } else {
+          let newOwner = ownerArg;
+          let newGroup = target.group || 'uczen';
+          if (ownerArg.includes(':')) {
+            const [o, g] = ownerArg.split(':');
+            newOwner = o || target.owner || 'uczen';
+            newGroup = g || target.group || 'uczen';
+          }
+
+          setVfs(prev => ({
+            ...prev,
+            [target.id]: {
+              ...prev[target.id],
+              owner: newOwner,
+              group: newGroup
+            }
+          }));
+
+          outputs = [{ text: `Zmieniono właściciela "${target.name}" na: ${newOwner}${ownerArg.includes(':') ? ':' + newGroup : ''}`, type: 'success', timestamp: getCurrentDateString() }];
+          onAddXP(15);
+        }
+        break;
+      }
+
+      case 'find': {
+        const nameFlagIdx = args.findIndex(a => a === '-name');
+        let pattern = '*';
+        if (nameFlagIdx !== -1 && args[nameFlagIdx + 1]) {
+          pattern = args[nameFlagIdx + 1].replace(/['"]/g, '');
+        } else if (args[0] && !args[0].startsWith('-')) {
+          pattern = args[0].replace(/['"]/g, '');
+        }
+
+        const cleanPattern = pattern.replace(/^\*/, '').toLowerCase();
+        const allNodes = Object.values(vfs).filter(node => node.parentId !== null);
+        const matches = allNodes.filter(node => {
+          if (cleanPattern === '' || cleanPattern === '*') return true;
+          return node.name.toLowerCase().includes(cleanPattern) || node.name.toLowerCase().endsWith(cleanPattern);
+        });
+
+        if (matches.length > 0) {
+          outputs = matches.map(node => ({
+            text: `./${node.name}`,
+            type: 'output' as const,
+            timestamp: getCurrentDateString()
+          }));
+          onAddXP(10);
+        } else {
+          outputs = [{ text: `find: brak wyników dla wzorca "${pattern}"`, type: 'output', timestamp: getCurrentDateString() }];
         }
         break;
       }
