@@ -19,7 +19,17 @@ import {
   Monitor,
   Trash2,
   Smile,
-  Gamepad2
+  Gamepad2,
+  Keyboard,
+  Search,
+  Copy,
+  Check,
+  Sparkles,
+  Filter,
+  Layers,
+  Zap,
+  Laptop,
+  Command
 } from 'lucide-react';
 
 interface TheorySectionProps {
@@ -27,6 +37,238 @@ interface TheorySectionProps {
   quizDone: boolean;
   setQuizDone: (done: boolean) => void;
 }
+
+export interface ShortcutItem {
+  id: string;
+  action: string;
+  category: 'files' | 'navigation' | 'terminal' | 'clipboard';
+  categoryLabel: string;
+  windowsKeys: string[];
+  linuxKeys: string[];
+  description: string;
+  proTip: string;
+  level: 'Podstawowy' | 'Średni' | 'Zaawansowany';
+  badgeColor: string;
+}
+
+export const SHORTCUTS_DATA: ShortcutItem[] = [
+  {
+    id: 'sc_new_folder',
+    action: 'Tworzenie nowego folderu',
+    category: 'files',
+    categoryLabel: 'Pliki i Katalogi',
+    windowsKeys: ['Ctrl', 'Shift', 'N'],
+    linuxKeys: ['Ctrl', 'Shift', 'N', '(lub komenda: mkdir)'],
+    description: 'Błyskawicznie tworzy pusty nowy katalog w aktualnie otwartym folderze lub w wierszu poleceń.',
+    proTip: 'Nie musisz klikać prawym przyciskiem myszy i szukać w menu. Ten skrót działa natychmiast w Eksploratorze Windows i w menedżerze plików Nautilus!',
+    level: 'Podstawowy',
+    badgeColor: 'bg-blue-100 text-blue-800 border-blue-200'
+  },
+  {
+    id: 'sc_rename',
+    action: 'Zmiana nazwy pliku lub folderu',
+    category: 'files',
+    categoryLabel: 'Pliki i Katalogi',
+    windowsKeys: ['F2'],
+    linuxKeys: ['F2', '(lub komenda: mv)'],
+    description: 'Włącza tryb szybkiej edycji nazwy zaznaczonego elementu.',
+    proTip: 'Klawisz F2 chroni przed przypadkowym otwarciem pliku, które często zdarza się przy zbyt szybkim klikaniu myszką.',
+    level: 'Podstawowy',
+    badgeColor: 'bg-blue-100 text-blue-800 border-blue-200'
+  },
+  {
+    id: 'sc_delete_perm',
+    action: 'Trwałe usuwanie pliku (z pominięciem Kosza)',
+    category: 'files',
+    categoryLabel: 'Pliki i Katalogi',
+    windowsKeys: ['Shift', 'Delete'],
+    linuxKeys: ['Shift', 'Delete', '(lub komenda: rm)'],
+    description: 'Kasuje plik od razu na stałe bez umieszczania go w buforze Kosza systemowego.',
+    proTip: 'Używaj rozważnie! Plików usuniętych tą kombinacją nie da się przywrócić z Kosza jednym kliknięciem.',
+    level: 'Średni',
+    badgeColor: 'bg-amber-100 text-amber-800 border-amber-200'
+  },
+  {
+    id: 'sc_copy',
+    action: 'Kopiowanie do schowka',
+    category: 'clipboard',
+    categoryLabel: 'Schowek i Edycja',
+    windowsKeys: ['Ctrl', 'C'],
+    linuxKeys: ['Ctrl', 'C', '(w Terminalu: Ctrl + Shift + C)'],
+    description: 'Kopiuje zaznaczony plik, folder lub fragment tekstu do pamięci podręcznej (RAM).',
+    proTip: 'Ważna różnica: w terminalu Linux samo Ctrl+C przerywa działający program, dlatego do kopiowania tekstu w oknie konsoli wciskamy Ctrl+Shift+C!',
+    level: 'Podstawowy',
+    badgeColor: 'bg-blue-100 text-blue-800 border-blue-200'
+  },
+  {
+    id: 'sc_paste',
+    action: 'Wklejanie ze schowka',
+    category: 'clipboard',
+    categoryLabel: 'Schowek i Edycja',
+    windowsKeys: ['Ctrl', 'V'],
+    linuxKeys: ['Ctrl', 'V', '(w Terminalu: Ctrl + Shift + V)'],
+    description: 'Wstawia skopiowany wcześniej obiekt do bieżącej lokalizacji lub edytowanego dokumentu.',
+    proTip: 'W terminalu Linux wklejanie skryptów i poleceń ze schowka wykonujemy za pomocą Ctrl+Shift+V lub środkowego przycisku myszy.',
+    level: 'Podstawowy',
+    badgeColor: 'bg-blue-100 text-blue-800 border-blue-200'
+  },
+  {
+    id: 'sc_cut',
+    action: 'Wytnij (przenoszenie obiektu)',
+    category: 'clipboard',
+    categoryLabel: 'Schowek i Edycja',
+    windowsKeys: ['Ctrl', 'X'],
+    linuxKeys: ['Ctrl', 'X', '(lub komenda: mv plik cel/)'],
+    description: 'Przygotowuje plik lub tekst do przeniesienia (po wklejeniu znika z pierwotnego miejsca).',
+    proTip: 'Najszybsza metoda reorganizacji dysku: Ctrl+X w starym folderze, przejście do nowego i Ctrl+V.',
+    level: 'Podstawowy',
+    badgeColor: 'bg-blue-100 text-blue-800 border-blue-200'
+  },
+  {
+    id: 'sc_select_all',
+    action: 'Zaznacz wszystkie pliki w folderze',
+    category: 'files',
+    categoryLabel: 'Pliki i Katalogi',
+    windowsKeys: ['Ctrl', 'A'],
+    linuxKeys: ['Ctrl', 'A'],
+    description: 'Zaznacza wszystkie pliki, podfoldery lub całą zawartość dokumentu tekstowego.',
+    proTip: 'Używaj przed masowym kopiowaniem lub przenoszeniem setek plików naraz.',
+    level: 'Podstawowy',
+    badgeColor: 'bg-blue-100 text-blue-800 border-blue-200'
+  },
+  {
+    id: 'sc_search',
+    action: 'Wyszukiwanie plików i folderów',
+    category: 'navigation',
+    categoryLabel: 'Nawigacja i Eksplorator',
+    windowsKeys: ['Ctrl', 'F', 'lub', 'F3'],
+    linuxKeys: ['Ctrl', 'F', '(lub komenda: find / grep)'],
+    description: 'Aktywuje pole szukania i pozwala filtrować po nazwach oraz rozszerzeniach (np. *.pdf).',
+    proTip: 'W Eksploratorze Windows naciśnięcie Ctrl+F lub F3 od razu ustawia kursor w polu wyszukiwania u góry.',
+    level: 'Podstawowy',
+    badgeColor: 'bg-blue-100 text-blue-800 border-blue-200'
+  },
+  {
+    id: 'sc_open_explorer',
+    action: 'Otwarcie nowego okna Menedżera plików',
+    category: 'navigation',
+    categoryLabel: 'Nawigacja i Eksplorator',
+    windowsKeys: ['Win', 'E', 'lub', 'Ctrl', 'N'],
+    linuxKeys: ['Super', 'E', 'lub', 'Ctrl', 'N'],
+    description: 'Otwiera nowe okno Eksploratora plików / Nautilus z dowolnego miejsca w systemie.',
+    proTip: 'Skrót Win + E to najpopularniejszy skrót administratorów Windows do natychmiastowego dostępu do dysków.',
+    level: 'Podstawowy',
+    badgeColor: 'bg-blue-100 text-blue-800 border-blue-200'
+  },
+  {
+    id: 'sc_properties',
+    action: 'Właściwości pliku / atrybuty i rozmiar',
+    category: 'files',
+    categoryLabel: 'Pliki i Katalogi',
+    windowsKeys: ['Alt', 'Enter'],
+    linuxKeys: ['Alt', 'Enter', '(lub komenda: ls -l)'],
+    description: 'Otwiera okno szczegółowych właściwości, atrybutów, rozmiaru na dysku i uprawnień.',
+    proTip: 'Zamiast klikać prawym przyciskiem myszy i wybierać "Właściwości", zaznacz plik i wciśnij Alt+Enter.',
+    level: 'Średni',
+    badgeColor: 'bg-amber-100 text-amber-800 border-amber-200'
+  },
+  {
+    id: 'sc_up_dir',
+    action: 'Przejście do folderu nadrzędnego (w górę)',
+    category: 'navigation',
+    categoryLabel: 'Nawigacja i Eksplorator',
+    windowsKeys: ['Alt', '↑ (Góra)'],
+    linuxKeys: ['Alt', '↑ (Góra)', '(lub komenda: cd ..)'],
+    description: 'Przechodzi o jeden poziom wyżej w hierarchii drzewa katalogów.',
+    proTip: 'W terminalu odpowiada temu polecenie cd .. (dwie kropki oznaczają katalog nadrzędny).',
+    level: 'Podstawowy',
+    badgeColor: 'bg-blue-100 text-blue-800 border-blue-200'
+  },
+  {
+    id: 'sc_tab_autocomplete',
+    action: 'Autouzupełnianie nazw plików i komend (Tab)',
+    category: 'terminal',
+    categoryLabel: 'Terminal i Konsola',
+    windowsKeys: ['Tab (w CMD / PowerShell)'],
+    linuxKeys: ['Tab (w Bash / Terminal)'],
+    description: 'Automatycznie dopełnia nazwę pliku, katalogu lub polecenia po wpisaniu pierwszych liter.',
+    proTip: 'Najważniejszy klawisz w terminalu! Dwukrotne naciśnięcie klawisza Tab wyświetla listę wszystkich pasujących plików.',
+    level: 'Zaawansowany',
+    badgeColor: 'bg-purple-100 text-purple-800 border-purple-200'
+  },
+  {
+    id: 'sc_clear_screen',
+    action: 'Czyszczenie ekranu terminala',
+    category: 'terminal',
+    categoryLabel: 'Terminal i Konsola',
+    windowsKeys: ['cls'],
+    linuxKeys: ['Ctrl', 'L', '(lub komenda: clear)'],
+    description: 'Błyskawicznie przewija i oczyszcza widok konsoli ze starych komunikatów.',
+    proTip: 'Wciśnięcie Ctrl+L w terminalu Linux nie kasuje historii, lecz czyści ekran i umieszcza znak zachęty na samej górze.',
+    level: 'Średni',
+    badgeColor: 'bg-amber-100 text-amber-800 border-amber-200'
+  },
+  {
+    id: 'sc_sigint_cancel',
+    action: 'Przerwanie działającego procesu / skryptu',
+    category: 'terminal',
+    categoryLabel: 'Terminal i Konsola',
+    windowsKeys: ['Ctrl', 'C'],
+    linuxKeys: ['Ctrl', 'C'],
+    description: 'Wysyła sygnał przerwania (SIGINT), natychmiast zatrzymując zablokowany program lub pętlę.',
+    proTip: 'Niezbędny skrót, gdy program się zawiesi, wyświetla zbyt dużo tekstu (np. ping / cat) lub działa w nieskończoność.',
+    level: 'Średni',
+    badgeColor: 'bg-amber-100 text-amber-800 border-amber-200'
+  },
+  {
+    id: 'sc_clear_line',
+    action: 'Wyczyszczenie wpisywanego wiersza komendy',
+    category: 'terminal',
+    categoryLabel: 'Terminal i Konsola',
+    windowsKeys: ['Esc'],
+    linuxKeys: ['Ctrl', 'U'],
+    description: 'Usuwa cały wpisany tekst w bieżącym wierszu od kursora do początku linii.',
+    proTip: 'Zamiast 40 razy wciskać Backspace przy pomyłce w długiej ścieżce, wciśnij Ctrl+U w Linuxie lub Esc w Windows!',
+    level: 'Zaawansowany',
+    badgeColor: 'bg-purple-100 text-purple-800 border-purple-200'
+  },
+  {
+    id: 'sc_history_search',
+    action: 'Przeszukiwanie historii wpisanych komend',
+    category: 'terminal',
+    categoryLabel: 'Terminal i Konsola',
+    windowsKeys: ['F7', 'lub', '↑ / ↓'],
+    linuxKeys: ['Ctrl', 'R', 'lub', '↑ / ↓'],
+    description: 'Pozwala błyskawicznie odnaleźć i ponownie uruchomić komendę wpisaną wcześniej.',
+    proTip: 'Wciśnij Ctrl+R w terminalu Linux i zacznij pisać fragment komendy – system sam odnajdzie ją w historii!',
+    level: 'Zaawansowany',
+    badgeColor: 'bg-purple-100 text-purple-800 border-purple-200'
+  },
+  {
+    id: 'sc_open_terminal',
+    action: 'Szybkie uruchomienie okna Terminala',
+    category: 'navigation',
+    categoryLabel: 'Nawigacja i Eksplorator',
+    windowsKeys: ['Win', 'X', '→', 'T'],
+    linuxKeys: ['Ctrl', 'Alt', 'T'],
+    description: 'Błyskawicznie uruchamia nowe okno konsoli/terminala z poziomu pulpitu.',
+    proTip: 'W Ubuntu Linux kombinacja Ctrl+Alt+T to najpopularniejszy skrót klawiszowy na świecie!',
+    level: 'Średni',
+    badgeColor: 'bg-amber-100 text-amber-800 border-amber-200'
+  },
+  {
+    id: 'sc_lock_screen',
+    action: 'Blokada stacji roboczej (Bezpieczeństwo)',
+    category: 'navigation',
+    categoryLabel: 'Nawigacja i Eksplorator',
+    windowsKeys: ['Win', 'L'],
+    linuxKeys: ['Super', 'L'],
+    description: 'Natychmiast blokuje ekran komputera, chroniąc otwarte pliki przed osobami postronnymi.',
+    proTip: 'Złota zasada każdego administratora: odchodząc od biurka, zawsze blokuj ekran skrótem Win+L!',
+    level: 'Podstawowy',
+    badgeColor: 'bg-blue-100 text-blue-800 border-blue-200'
+  }
+];
 
 interface QuizQuestion {
   id: number;
@@ -168,6 +410,28 @@ const ALL_QUIZ_QUESTIONS: QuizQuestion[] = [
     ],
     correct: 1,
     explanation: 'Dysk twardy (HDD/SSD) to trwała pamięć komputera. Dane na nim pozostają bezpieczne nawet po odłączeniu zasilania.'
+  },
+  {
+    id: 13,
+    question: '⌨️ Jaki klawisz pozwala błyskawicznie zmienić nazwę zaznaczonego pliku (np. w Eksploratorze Windows i Linuxie)?',
+    options: [
+      'Klawisz F2',
+      'Klawisz Spacja',
+      'Klawisz Caps Lock'
+    ],
+    correct: 0,
+    explanation: 'Klawisz F2 włącza tryb edycji nazwy pliku lub folderu, chroniąc przed przypadkowym dwuklikiem otwierającym plik!'
+  },
+  {
+    id: 14,
+    question: '⚡ Dlaczego w terminalu Linux do kopiowania tekstu używamy Ctrl + Shift + C zamiast samego Ctrl + C?',
+    options: [
+      'Bo Linux nie pozwala na zwykłe kopiowanie tekstu',
+      'Bo kombinacja Ctrl + C służy w terminalu do natychmiastowego przerwania/zatrzymania programu (SIGINT)',
+      'Bo klawisz Shift sprawia, że litery kopiują się w kolorze zielonym'
+    ],
+    correct: 1,
+    explanation: 'W konsoli Linux skrót Ctrl+C wysyła sygnał przerwania procesu (SIGINT), dlatego do operacji schowka klawiatura wymaga dodatkowego klawisza Shift (Ctrl+Shift+C / Ctrl+Shift+V).'
   }
 ];
 
@@ -183,7 +447,50 @@ function getRandomSubset<T>(array: T[], size: number): T[] {
 }
 
 export default function TheorySection({ onAddXP, quizDone, setQuizDone }: TheorySectionProps) {
-  const [activeTab, setActiveTab] = useState<'basics' | 'paths' | 'terminal' | 'quiz'>('basics');
+  const [activeTab, setActiveTab] = useState<'basics' | 'paths' | 'terminal' | 'shortcuts' | 'quiz'>('basics');
+  
+  // Shortcuts interactive state
+  const [shortcutCategory, setShortcutCategory] = useState<'all' | 'files' | 'navigation' | 'terminal' | 'clipboard'>('all');
+  const [shortcutOS, setShortcutOS] = useState<'all' | 'windows' | 'linux'>('all');
+  const [shortcutSearch, setShortcutSearch] = useState<string>('');
+  const [copiedShortcutId, setCopiedShortcutId] = useState<string | null>(null);
+  const [testedShortcuts, setTestedShortcuts] = useState<Record<string, boolean>>({});
+
+  const handleTestOrCopy = (shortcut: ShortcutItem) => {
+    const textToCopy = `[${shortcut.action}] Windows: ${shortcut.windowsKeys.join(' + ')} | Linux: ${shortcut.linuxKeys.join(' ')}`;
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(textToCopy).catch(() => {});
+    }
+    
+    setCopiedShortcutId(shortcut.id);
+    setTimeout(() => {
+      setCopiedShortcutId(null);
+    }, 2200);
+
+    if (!testedShortcuts[shortcut.id]) {
+      setTestedShortcuts(prev => ({ ...prev, [shortcut.id]: true }));
+      onAddXP(5);
+    }
+  };
+
+  const filteredShortcuts = SHORTCUTS_DATA.filter(sc => {
+    if (shortcutCategory !== 'all' && sc.category !== shortcutCategory) {
+      return false;
+    }
+    const query = shortcutSearch.toLowerCase().trim();
+    if (query !== '') {
+      const matchAction = sc.action.toLowerCase().includes(query);
+      const matchDesc = sc.description.toLowerCase().includes(query);
+      const matchTip = sc.proTip.toLowerCase().includes(query);
+      const matchCategory = sc.categoryLabel.toLowerCase().includes(query);
+      const matchWin = sc.windowsKeys.some(k => k.toLowerCase().includes(query));
+      const matchLin = sc.linuxKeys.some(k => k.toLowerCase().includes(query));
+      if (!matchAction && !matchDesc && !matchTip && !matchCategory && !matchWin && !matchLin) {
+        return false;
+      }
+    }
+    return true;
+  });
   
   // Quiz State
   const [activeQuestions, setActiveQuestions] = useState<QuizQuestion[]>(() => {
@@ -246,9 +553,9 @@ export default function TheorySection({ onAddXP, quizDone, setQuizDone }: Theory
       <div className="flex border-b border-[#ECEFF4] overflow-x-auto bg-[#F8FAFC]">
         <button
           onClick={() => setActiveTab('basics')}
-          className={`flex-1 py-4 px-6 text-sm font-bold border-b-2 text-center whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-2 ${
+          className={`flex-1 py-4 px-5 text-sm font-bold border-b-2 text-center whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-2 ${
             activeTab === 'basics'
-              ? 'border-[#5E81AC] text-[#5E81AC] bg-white'
+              ? 'border-[#5E81AC] text-[#5E81AC] bg-white shadow-sm'
               : 'border-transparent text-[#4C566A] hover:text-[#2E3440] hover:bg-[#ECEFF4]/50'
           }`}
           id="tab-basics-btn"
@@ -258,9 +565,9 @@ export default function TheorySection({ onAddXP, quizDone, setQuizDone }: Theory
         </button>
         <button
           onClick={() => setActiveTab('paths')}
-          className={`flex-1 py-4 px-6 text-sm font-bold border-b-2 text-center whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-2 ${
+          className={`flex-1 py-4 px-5 text-sm font-bold border-b-2 text-center whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-2 ${
             activeTab === 'paths'
-              ? 'border-[#5E81AC] text-[#5E81AC] bg-white'
+              ? 'border-[#5E81AC] text-[#5E81AC] bg-white shadow-sm'
               : 'border-transparent text-[#4C566A] hover:text-[#2E3440] hover:bg-[#ECEFF4]/50'
           }`}
           id="tab-paths-btn"
@@ -270,9 +577,9 @@ export default function TheorySection({ onAddXP, quizDone, setQuizDone }: Theory
         </button>
         <button
           onClick={() => setActiveTab('terminal')}
-          className={`flex-1 py-4 px-6 text-sm font-bold border-b-2 text-center whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-2 ${
+          className={`flex-1 py-4 px-5 text-sm font-bold border-b-2 text-center whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-2 ${
             activeTab === 'terminal'
-              ? 'border-[#5E81AC] text-[#5E81AC] bg-white'
+              ? 'border-[#5E81AC] text-[#5E81AC] bg-white shadow-sm'
               : 'border-transparent text-[#4C566A] hover:text-[#2E3440] hover:bg-[#ECEFF4]/50'
           }`}
           id="tab-terminal-btn"
@@ -281,16 +588,29 @@ export default function TheorySection({ onAddXP, quizDone, setQuizDone }: Theory
           3. Komendy Terminala
         </button>
         <button
+          onClick={() => setActiveTab('shortcuts')}
+          className={`flex-1 py-4 px-5 text-sm font-bold border-b-2 text-center whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-2 ${
+            activeTab === 'shortcuts'
+              ? 'border-[#5E81AC] text-[#5E81AC] bg-white shadow-sm'
+              : 'border-transparent text-[#4C566A] hover:text-[#2E3440] hover:bg-[#ECEFF4]/50'
+          }`}
+          id="tab-shortcuts-btn"
+        >
+          <Keyboard className="w-4 h-4 text-[#5E81AC]" />
+          <span>4. Skróty Klawiszowe</span>
+          <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded-full font-bold">Nowość</span>
+        </button>
+        <button
           onClick={() => setActiveTab('quiz')}
-          className={`flex-1 py-4 px-6 text-sm font-bold border-b-2 text-center whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-2 ${
+          className={`flex-1 py-4 px-5 text-sm font-bold border-b-2 text-center whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-2 ${
             activeTab === 'quiz'
-              ? 'border-[#5E81AC] text-[#5E81AC] bg-white'
+              ? 'border-[#5E81AC] text-[#5E81AC] bg-white shadow-sm'
               : 'border-transparent text-[#4C566A] hover:text-[#2E3440] hover:bg-[#ECEFF4]/50'
           }`}
           id="tab-quiz-btn"
         >
           <HelpCircle className="w-4 h-4" />
-          4. Sprawdź Wiedzę (Quiz)
+          5. Sprawdź Wiedzę (Quiz)
         </button>
       </div>
 
@@ -651,7 +971,409 @@ export default function TheorySection({ onAddXP, quizDone, setQuizDone }: Theory
           </div>
         )}
 
-        {/* Tab 4: Quiz */}
+        {/* Tab 4: Shortcuts (Windows & Linux) */}
+        {activeTab === 'shortcuts' && (
+          <div className="space-y-8 animate-fadeIn" id="content-shortcuts">
+            {/* Header section with audio and stats */}
+            <div className="bg-gradient-to-r from-sky-50 via-indigo-50/40 to-purple-50/50 border border-sky-200/80 rounded-2xl p-6 md:p-7 shadow-sm">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <div className="p-2 bg-[#5E81AC] text-white rounded-xl shadow-sm">
+                      <Keyboard className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-xl md:text-2xl font-bold text-gray-900">
+                      Interaktywna Tabela Skrótów Klawiszowych
+                    </h3>
+                    <SpeechButton
+                      text="Interaktywna Tabela Skrótów Klawiszowych dla systemów Windows 11 i Linux Ubuntu. Skróty klawiszowe to sekret profesjonalnych administratorów i programistów. Pozwalają tworzyć foldery, zmieniać nazwy, kopiować i zarządzać plikami nawet dziesięć razy szybciej niż myszką. Kliknij przycisk Wypróbuj lub Kopiuj przy dowolnym skrócie, aby go przetestować i zdobyć dodatkowe punkty doświadczenia!"
+                      size="sm"
+                    />
+                  </div>
+                  <p className="text-sm text-gray-600 max-w-3xl leading-relaxed">
+                    Poznaj kluczowe skróty klawiszowe do zarządzania plikami, folderami, oknami oraz terminalem w systemach <strong>Windows 11</strong> i <strong>Linux Ubuntu</strong>.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 bg-white/90 p-3.5 rounded-xl border border-sky-200 shadow-xs self-start lg:self-auto">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-amber-500 animate-spin" />
+                    <div className="text-xs">
+                      <div className="font-bold text-gray-800">
+                        Przetestowano: {Object.keys(testedShortcuts).length} / {SHORTCUTS_DATA.length}
+                      </div>
+                      <div className="text-emerald-600 font-semibold">
+                        +{Object.keys(testedShortcuts).length * 5} XP zdobyte!
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div className="bg-[#F8FAFC] border border-[#E5E9F0] rounded-2xl p-5 space-y-4 shadow-xs">
+              <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+                {/* Search Box */}
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={shortcutSearch}
+                    onChange={(e) => setShortcutSearch(e.target.value)}
+                    placeholder="Szukaj skrótu lub akcji (np. Ctrl+C, F2, nowy folder, usuń, tab, terminal)..."
+                    className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5E81AC] focus:border-transparent transition-all shadow-xs"
+                    id="shortcuts-search-input"
+                  />
+                  {shortcutSearch && (
+                    <button
+                      onClick={() => setShortcutSearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs bg-gray-100 rounded-full w-5 h-5 flex items-center justify-center"
+                      title="Wyczyść wyszukiwanie"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {/* OS Switcher */}
+                <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-gray-200 shadow-xs self-start md:self-auto">
+                  <button
+                    onClick={() => setShortcutOS('all')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      shortcutOS === 'all'
+                        ? 'bg-[#5E81AC] text-white shadow-xs'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                    id="filter-os-all"
+                  >
+                    Wszystkie OS
+                  </button>
+                  <button
+                    onClick={() => setShortcutOS('windows')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      shortcutOS === 'windows'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                    id="filter-os-win"
+                  >
+                    <span>🪟 Windows</span>
+                  </button>
+                  <button
+                    onClick={() => setShortcutOS('linux')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      shortcutOS === 'linux'
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                    id="filter-os-lin"
+                  >
+                    <span>🐧 Linux</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Category Pills */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+                <span className="text-gray-500 font-medium flex items-center gap-1 pl-1">
+                  <Filter className="w-3.5 h-3.5" />
+                  Kategoria:
+                </span>
+                <button
+                  onClick={() => setShortcutCategory('all')}
+                  className={`px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-all ${
+                    shortcutCategory === 'all'
+                      ? 'bg-gray-900 text-white shadow-xs'
+                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  Wszystkie ({SHORTCUTS_DATA.length})
+                </button>
+                <button
+                  onClick={() => setShortcutCategory('files')}
+                  className={`px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                    shortcutCategory === 'files'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  <Folder className="w-3.5 h-3.5" />
+                  Pliki i Foldery
+                </button>
+                <button
+                  onClick={() => setShortcutCategory('navigation')}
+                  className={`px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                    shortcutCategory === 'navigation'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                  Nawigacja i Eksplorator
+                </button>
+                <button
+                  onClick={() => setShortcutCategory('terminal')}
+                  className={`px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                    shortcutCategory === 'terminal'
+                      ? 'bg-purple-600 text-white shadow-xs'
+                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  <Terminal className="w-3.5 h-3.5" />
+                  Terminal i Konsola
+                </button>
+                <button
+                  onClick={() => setShortcutCategory('clipboard')}
+                  className={`px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                    shortcutCategory === 'clipboard'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  Schowek i Edycja
+                </button>
+              </div>
+            </div>
+
+            {/* Results Counter */}
+            <div className="flex items-center justify-between text-xs text-gray-500 px-1">
+              <span>
+                Znaleziono: <strong>{filteredShortcuts.length}</strong> {filteredShortcuts.length === 1 ? 'skrót' : filteredShortcuts.length < 5 ? 'skróty' : 'skrótów'}
+              </span>
+              <span className="text-[11px] text-gray-400">
+                💡 Kliknij przycisk <span className="text-sky-600 font-semibold">„Wypróbuj / Kopiuj”</span>, aby przetestować skrót i zdobyć punkty XP!
+              </span>
+            </div>
+
+            {/* Interactive Shortcuts Table */}
+            {filteredShortcuts.length > 0 ? (
+              <div className="border border-gray-200 rounded-2xl overflow-hidden shadow-xs bg-white">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse" id="shortcuts-interactive-table">
+                    <thead>
+                      <tr className="bg-[#ECEFF4] text-[#2E3440] text-xs font-extrabold uppercase tracking-wider border-b border-gray-200">
+                        <th className="py-4 px-5 w-1/4">Akcja i Kategoria</th>
+                        {(shortcutOS === 'all' || shortcutOS === 'windows') && (
+                          <th className="py-4 px-5 w-1/4">
+                            <span className="inline-flex items-center gap-1.5 text-blue-700 bg-blue-100/70 px-2.5 py-1 rounded-md">
+                              🪟 Windows (Eksplorator / CMD)
+                            </span>
+                          </th>
+                        )}
+                        {(shortcutOS === 'all' || shortcutOS === 'linux') && (
+                          <th className="py-4 px-5 w-1/4">
+                            <span className="inline-flex items-center gap-1.5 text-amber-800 bg-amber-100/70 px-2.5 py-1 rounded-md">
+                              🐧 Linux Ubuntu (Files / Bash)
+                            </span>
+                          </th>
+                        )}
+                        <th className="py-4 px-5">Opis i Wskazówka (Pro-Tip)</th>
+                        <th className="py-4 px-5 text-center w-28">Akcje</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 text-sm">
+                      {filteredShortcuts.map((sc) => {
+                        const isCopied = copiedShortcutId === sc.id;
+                        const isTested = testedShortcuts[sc.id];
+
+                        return (
+                          <tr
+                            key={sc.id}
+                            className={`hover:bg-sky-50/40 transition-colors ${
+                              isTested ? 'bg-emerald-50/20' : ''
+                            }`}
+                            id={`shortcut-row-${sc.id}`}
+                          >
+                            {/* Action & Category */}
+                            <td className="py-4 px-5 align-top">
+                              <div className="space-y-1.5">
+                                <div className="font-bold text-gray-900 flex items-center gap-2">
+                                  <span>{sc.action}</span>
+                                </div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-[11px] font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">
+                                    {sc.categoryLabel}
+                                  </span>
+                                  <span
+                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${sc.badgeColor}`}
+                                  >
+                                    {sc.level}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Windows Keys */}
+                            {(shortcutOS === 'all' || shortcutOS === 'windows') && (
+                              <td className="py-4 px-5 align-top">
+                                <div className="flex flex-wrap items-center gap-1.5 font-mono">
+                                  {sc.windowsKeys.map((key, kIdx) => (
+                                    <React.Fragment key={kIdx}>
+                                      {key === 'lub' || key === 'potem' || key === '→' ? (
+                                        <span className="text-xs text-gray-400 font-sans font-medium px-1">
+                                          {key}
+                                        </span>
+                                      ) : (
+                                        <kbd className="inline-flex items-center justify-center min-w-[28px] px-2.5 py-1 bg-gradient-to-b from-white to-gray-100 border border-gray-300 rounded-lg shadow-xs font-mono text-xs font-bold text-gray-800 tracking-wide border-b-2">
+                                          {key}
+                                        </kbd>
+                                      )}
+                                    </React.Fragment>
+                                  ))}
+                                </div>
+                              </td>
+                            )}
+
+                            {/* Linux Keys */}
+                            {(shortcutOS === 'all' || shortcutOS === 'linux') && (
+                              <td className="py-4 px-5 align-top">
+                                <div className="flex flex-wrap items-center gap-1.5 font-mono">
+                                  {sc.linuxKeys.map((key, kIdx) => (
+                                    <React.Fragment key={kIdx}>
+                                      {key === 'lub' || key === 'potem' || key.startsWith('(') ? (
+                                        <span className="text-xs text-gray-500 font-sans font-medium px-1">
+                                          {key}
+                                        </span>
+                                      ) : key.startsWith('rm') || key.startsWith('mv') || key.startsWith('mkdir') || key.startsWith('cls') || key.startsWith('clear') || key.startsWith('find') ? (
+                                        <kbd className="inline-flex items-center px-2 py-1 bg-gray-900 border border-gray-700 text-emerald-400 rounded-lg shadow-xs font-mono text-xs font-bold tracking-wide">
+                                          {key}
+                                        </kbd>
+                                      ) : (
+                                        <kbd className="inline-flex items-center justify-center min-w-[28px] px-2.5 py-1 bg-gradient-to-b from-orange-50 to-amber-100 border border-amber-300 rounded-lg shadow-xs font-mono text-xs font-bold text-amber-950 tracking-wide border-b-2">
+                                          {key}
+                                        </kbd>
+                                      )}
+                                    </React.Fragment>
+                                  ))}
+                                </div>
+                              </td>
+                            )}
+
+                            {/* Description & Pro-Tip */}
+                            <td className="py-4 px-5 align-top space-y-2">
+                              <p className="text-xs text-gray-700 leading-relaxed">
+                                {sc.description}
+                              </p>
+                              <div className="bg-amber-50/70 border border-amber-200/80 rounded-xl p-2.5 text-[11px] text-amber-900 flex items-start gap-1.5">
+                                <Zap className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
+                                <div>
+                                  <strong className="font-semibold text-amber-950">Wskazówka: </strong>
+                                  {sc.proTip}
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Action buttons (Speech & Copy/Test) */}
+                            <td className="py-4 px-5 align-top text-center">
+                              <div className="flex flex-col items-center gap-2">
+                                <button
+                                  onClick={() => handleTestOrCopy(sc)}
+                                  className={`w-full px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs ${
+                                    isCopied
+                                      ? 'bg-emerald-600 text-white'
+                                      : 'bg-[#5E81AC] hover:bg-[#4C566A] text-white'
+                                  }`}
+                                  title="Skopiuj skrót i zdobądź +5 XP!"
+                                  id={`btn-copy-${sc.id}`}
+                                >
+                                  {isCopied ? (
+                                    <>
+                                      <Check className="w-3.5 h-3.5" />
+                                      <span>Zrobione!</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="w-3.5 h-3.5" />
+                                      <span>Kopiuj</span>
+                                    </>
+                                  )}
+                                </button>
+
+                                <SpeechButton
+                                  text={`Skrót: ${sc.action}. Klawisze w systemie Windows: ${sc.windowsKeys.join(' plus ')}. Klawisze w systemie Linux: ${sc.linuxKeys.join(' ')}. Opis działania: ${sc.description}. Praktyczna wskazówka: ${sc.proTip}`}
+                                  size="xs"
+                                />
+
+                                {isTested && (
+                                  <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5">
+                                    <CheckCircle2 className="w-3 h-3" /> +5 XP
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-12 text-center space-y-3">
+                <Search className="w-10 h-10 text-gray-400 mx-auto" />
+                <h4 className="text-base font-bold text-gray-700">Brak pasujących skrótów</h4>
+                <p className="text-xs text-gray-500 max-w-sm mx-auto">
+                  Nie znaleziono skrótu pasującego do zapytania „{shortcutSearch}”. Spróbuj wpisać inną frazę lub zresetować filtry.
+                </p>
+                <button
+                  onClick={() => {
+                    setShortcutSearch('');
+                    setShortcutCategory('all');
+                    setShortcutOS('all');
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-all shadow-xs"
+                >
+                  Wyczyść wszystkie filtry
+                </button>
+              </div>
+            )}
+
+            {/* Kids Corner / Strefa Mistrza Klawiatury */}
+            <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 border border-indigo-200 rounded-2xl p-6 md:p-8 space-y-5 shadow-sm relative overflow-hidden">
+              <div className="absolute right-4 top-4 text-7xl opacity-10 select-none pointer-events-none">⌨️</div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-2xl">⚡🧙‍♂️🚀</span>
+                <h4 className="text-lg font-extrabold text-indigo-950">
+                  Strefa Mistrza Klawiatury – Dlaczego warto znać skróty?
+                </h4>
+                <SpeechButton
+                  text="Dlaczego prawdziwy informatyk i administrator kocha skróty klawiszowe? Po pierwsze: szybkość! Używając skrótów, Twoje dłonie nie muszą wędrować między klawiaturą a myszką, co pozwala wykonać zadania nawet dziesięć razy szybciej. Po drugie: brak pomyłek. Klawisze F2 lub Tab zabezpieczają Cię przed przypadkowymi literówkami. Po trzecie: serwery w chmurze i w internecie często w ogóle nie mają myszki ani kolorowych okienek – tam całe zarządzanie plikami opiera się wyłącznie na komendach i skrótach!"
+                  size="xs"
+                />
+              </div>
+
+              <div className="grid sm:grid-cols-3 gap-4 mt-2">
+                <div className="bg-white p-4 rounded-xl border border-indigo-100 shadow-2xs">
+                  <div className="text-2xl mb-1.5">🚀</div>
+                  <h5 className="font-bold text-indigo-950 text-xs">Superszybkość (10x)</h5>
+                  <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
+                    Nie musisz celować kursorem myszy w małe ikonki ani klikać prawym przyciskiem. Dwa klawisze robią to w ułamku sekundy!
+                  </p>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl border border-indigo-100 shadow-2xs">
+                  <div className="text-2xl mb-1.5">🛡️</div>
+                  <h5 className="font-bold text-indigo-950 text-xs">Zero pomyłek i literówek</h5>
+                  <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
+                    Klawisz <kbd className="px-1.5 py-0.5 bg-gray-100 rounded border border-gray-300 font-mono text-[10px]">Tab</kbd> w terminalu sam dokańcza długie nazwy plików, więc nie ma szans na błąd!
+                  </p>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl border border-indigo-100 shadow-2xs">
+                  <div className="text-2xl mb-1.5">🌐</div>
+                  <h5 className="font-bold text-indigo-950 text-xs">Serwery w chmurze bez myszki</h5>
+                  <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
+                    Większość serwerów internetowych nie ma pulpitu graficznego. Administratorzy pracują na nich wyłącznie za pomocą skrótów i terminala.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 5: Quiz */}
         {activeTab === 'quiz' && (
           <div className="space-y-6 animate-fadeIn" id="content-quiz">
             <div className="text-center max-w-xl mx-auto mb-8">

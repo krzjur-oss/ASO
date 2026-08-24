@@ -1,4 +1,4 @@
-const CACHE_NAME = 'akademia-so-v2';
+const CACHE_NAME = 'akademia-so-v3';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -7,6 +7,8 @@ self.addEventListener('install', (event) => {
         './',
         './index.html',
         './manifest.json',
+        './icon-192.png',
+        './icon-512.png',
         './icon-512.jpg'
       ]).catch((err) => {
         console.warn('SW pre-cache notice:', err);
@@ -30,13 +32,27 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   
-  // Ignore chrome-extension or external analytics
   const url = new URL(event.request.url);
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request)
+      if (cachedResponse) {
+        // Fetch in background to keep cache fresh (stale-while-revalidate for assets)
+        fetch(event.request)
+          .then((networkResponse) => {
+            if (networkResponse && networkResponse.status === 200) {
+              const resClone = networkResponse.clone();
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, resClone);
+              });
+            }
+          })
+          .catch(() => {});
+        return cachedResponse;
+      }
+
+      return fetch(event.request)
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
             const resClone = networkResponse.clone();
@@ -51,8 +67,6 @@ self.addEventListener('fetch', (event) => {
             return caches.match('./index.html') || caches.match('./');
           }
         });
-
-      return cachedResponse || fetchPromise;
     })
   );
 });
