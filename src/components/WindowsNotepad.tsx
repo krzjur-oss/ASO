@@ -22,6 +22,7 @@ interface WindowsNotepadProps {
   setActiveFileId: (id: string | null) => void;
   onAddXP: (points: number) => void;
   onActionTriggered: () => void;
+  onMinimize?: () => void;
   onClose: () => void;
 }
 
@@ -33,6 +34,7 @@ export default function WindowsNotepad({
   setActiveFileId,
   onAddXP,
   onActionTriggered,
+  onMinimize,
   onClose
 }: WindowsNotepadProps) {
   const [content, setContent] = useState('');
@@ -139,21 +141,39 @@ export default function WindowsNotepad({
   return (
     <div className="bg-white text-gray-800 border border-gray-300 rounded-3xl h-[550px] shadow-2xl flex flex-col overflow-hidden font-sans select-none">
       {/* Window Header */}
-      <div className="bg-blue-600 text-white px-4 py-2.5 flex items-center justify-between border-b border-blue-700">
+      <div className="bg-blue-600 text-white px-3 py-1.5 flex items-center justify-between border-b border-blue-700 select-none">
         <div className="flex items-center gap-2">
           <span className="text-sm">📝</span>
           <span className="font-bold text-xs sm:text-sm">{fileName} - Notatnik Windows</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {saveSuccess && (
             <span className="text-emerald-300 text-[10px] sm:text-xs font-semibold animate-pulse mr-2">
               ✓ Zapisano pomyślnie!
             </span>
           )}
+          {onMinimize && (
+            <button 
+              onClick={(e) => { e.stopPropagation(); onMinimize(); }}
+              className="w-6 h-6 rounded hover:bg-blue-700 text-blue-100 hover:text-white flex items-center justify-center transition-colors text-xs"
+              title="Minimalizuj do paska zadań"
+              id="notepad-btn-minimize"
+            >
+              —
+            </button>
+          )}
+          <button 
+            onClick={(e) => e.stopPropagation()}
+            className="w-6 h-6 rounded hover:bg-blue-700 text-blue-100 hover:text-white flex items-center justify-center transition-colors text-[10px]"
+            title="Maksymalizuj"
+          >
+            🗖
+          </button>
           <button 
             onClick={onClose}
-            className="text-white hover:bg-red-500 hover:text-white rounded-lg p-1 transition-colors w-6 h-6 flex items-center justify-center font-bold text-xs"
+            className="w-6 h-6 rounded hover:bg-red-600 text-blue-100 hover:text-white flex items-center justify-center transition-colors text-xs font-bold"
             title="Zamknij"
+            id="notepad-btn-close"
           >
             ✕
           </button>

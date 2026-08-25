@@ -29,7 +29,17 @@ import {
   Layers,
   Zap,
   Laptop,
-  Command
+  Command,
+  HardDrive,
+  FolderTree,
+  Cpu,
+  Settings,
+  ShieldAlert,
+  Database,
+  EyeOff,
+  Server,
+  Binary,
+  Layers as LayersIcon
 } from 'lucide-react';
 
 interface TheorySectionProps {
@@ -37,6 +47,432 @@ interface TheorySectionProps {
   quizDone: boolean;
   setQuizDone: (done: boolean) => void;
 }
+
+export interface DirectoryStructureItem {
+  id: string;
+  path: string;
+  name: string;
+  category: string;
+  purpose: string;
+  importance: string;
+  importanceColor: string;
+  contents: string[];
+  equivalentInOtherOS: string;
+  proTip: string;
+  speechText: string;
+}
+
+export const STRUCTURE_WIN_ITEMS: DirectoryStructureItem[] = [
+  {
+    id: 'c_drive',
+    path: 'C:\\',
+    name: 'Dysk Systemowy (Główny Wolumin C:)',
+    category: 'Główny Dysk / Root',
+    purpose: 'Podstawowy dysk twardy lub partycja SSD, na której zainstalowany jest system Windows 11 oraz wszystkie programy.',
+    importance: 'Kluczowa (Fundament komputera)',
+    importanceColor: 'bg-red-100 text-red-800 border-red-200',
+    contents: ['Windows', 'Program Files', 'Program Files (x86)', 'Users (Użytkownicy)', 'ProgramData (ukryty)'],
+    equivalentInOtherOS: 'W Linuxie odpowiednikiem jest korzeń / (root), jednak Linux nie używa liter dysków.',
+    proTip: 'Litera C: wywodzi się z historii komputerów PC: w latach 80. litery A: i B: były zarezerwowane dla stacji miękkich dyskietek!',
+    speechText: 'Dysk C dwukropek to główny dysk systemowy w Windows. To tutaj zainstalowany jest cały system operacyjny oraz wszystkie aplikacje.'
+  },
+  {
+    id: 'system32',
+    path: 'C:\\Windows\\System32',
+    name: 'System32 (Serce i Mózg Windowsa)',
+    category: 'Jądro i Narzędzia Systemowe',
+    purpose: 'Przechowuje najważniejsze pliki jądra, biblioteki dynamiczne (.dll), sterowniki urządzeń i kluczowe programy systemowe.',
+    importance: 'Ściśle chroniony (Nigdy nie usuwać!)',
+    importanceColor: 'bg-red-100 text-red-800 border-red-300 font-bold',
+    contents: ['cmd.exe (Wiersz poleceń)', 'calc.exe (Kalkulator)', 'notepad.exe (Notatnik)', 'taskmgr.exe (Menedżer zadań)', 'Sterowniki (.sys)', 'Biblioteki DLL (.dll)'],
+    equivalentInOtherOS: 'W Linuxie odpowiednikiem są katalogi /bin, /usr/bin oraz /usr/lib.',
+    proTip: 'Popularny internetowy żart sugerujący "usuń System32, aby przyspieszyć komputer" to niebezpieczny mit – usunięcie tego folderu natychmiast zepsuje system!',
+    speechText: 'Katalog System 32 w Windowsie to serce i mózg systemu. Przechowuje najważniejsze pliki systemowe, sterowniki oraz programy takie jak wiersz poleceń czy notatnik. Nigdy go nie usuwaj!'
+  },
+  {
+    id: 'windows_dir',
+    path: 'C:\\Windows',
+    name: 'Główny Folder Systemowy Windows',
+    category: 'Pliki Systemu Operacyjnego',
+    purpose: 'Główny katalog instalacyjny środowiska Windows – zawiera czcionki, dzienniki zdarzeń, motywy graficzne i zasoby startowe.',
+    importance: 'Kluczowa (Tylko odczyt dla użytkownika)',
+    importanceColor: 'bg-amber-100 text-amber-800 border-amber-200',
+    contents: ['System32', 'SysWOW64 (kompatybilność 32-bit)', 'Fonts (Czcionki)', 'Temp (Pliki tymczasowe)', 'regedit.exe (Rejestr)'],
+    equivalentInOtherOS: 'W Linuxie zasoby systemowe są rozdzielone między /usr, /etc oraz /var.',
+    proTip: 'Zwykły użytkownik bez uprawnień administratora nie może zapisywać ani usuwać plików wewnątrz C:\\Windows.',
+    speechText: 'Folder C dwukropek lewy ukośnik Windows zawiera całość zasobów systemu operacyjnego: czcionki, dzienniki zdarzeń i ustawienia graficzne.'
+  },
+  {
+    id: 'program_files',
+    path: 'C:\\Program Files',
+    name: 'Program Files (Aplikacje 64-bit)',
+    category: 'Katalog Oprogramowania',
+    purpose: 'Domyślne miejsce instalacji nowoczesnych programów i gier 64-bitowych (przeglądarki, edytory wideo, pakiety biurowe).',
+    importance: 'Wysoka (Oprogramowanie)',
+    importanceColor: 'bg-blue-100 text-blue-800 border-blue-200',
+    contents: ['Google\\Chrome', 'Microsoft Office', 'Adobe', 'Python', 'GIMP'],
+    equivalentInOtherOS: 'W Linuxie programy instalowane są w /usr/bin, /usr/share oraz /opt.',
+    proTip: 'Każdy zainstalowany program otrzymuje swój własny dedykowany podfolder, dzięki czemu pliki różnych programów nie mieszają się ze sobą.',
+    speechText: 'Program Files to domyślne miejsce instalacji 64-bitowych aplikacji w Windowsie. Każdy program dostaje swój własny podfolder.'
+  },
+  {
+    id: 'program_files_x86',
+    path: 'C:\\Program Files (x86)',
+    name: 'Program Files x86 (Aplikacje 32-bit)',
+    category: 'Wsteczna Kompatybilność',
+    purpose: 'Miejsce instalacji starszych programów 32-bitowych na nowoczesnym 64-bitowym systemie Windows.',
+    importance: 'Średnia (Aplikacje 32-bit)',
+    importanceColor: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+    contents: ['Steam', 'Starsze gry PC', 'Notepad++', 'WinRAR'],
+    equivalentInOtherOS: 'W Linuxie biblioteki 32-bitowe trafiają do katalogu /usr/lib32 lub /lib32.',
+    proTip: 'Liczba 86 w nazwie pochodzi od legendarnej rodziny procesorów Intel x86 (np. 80386, 80486).',
+    speechText: 'Program Files x86 przechowuje starsze aplikacje 32-bitowe, zapewniając pełną zgodność ze starszymi grami i programami.'
+  },
+  {
+    id: 'users',
+    path: 'C:\\Users\\ [NazwaUżytkownika]',
+    name: 'Profile Użytkowników (Users / Użytkownicy)',
+    category: 'Prywatne Dane Użytkownika',
+    purpose: 'Osobista przestrzeń każdego zalogowanego ucznia lub domownika – tutaj powstają Twoje dokumenty, rysunki i pobrane pliki.',
+    importance: 'Twoje Prywatne Pliki',
+    importanceColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    contents: ['Pulpit (Desktop)', 'Dokumenty (Documents)', 'Pobrane (Downloads)', 'Obrazy (Pictures)', 'Muzyka', 'AppData (ukryty)'],
+    equivalentInOtherOS: 'W Linuxie odpowiednikiem jest katalog /home/nazwa_uzytkownika (np. /home/uczen).',
+    proTip: 'Folder AppData jest domyślnie ukryty – przechowuje konfigurację aplikacji, historię przeglądarki i zapisy stanów gier (Save\'y)!',
+    speechText: 'Katalog Users zawiera prywatne profile każdego użytkownika komputera. Znajdziesz w nim Pulpit, Dokumenty, Pobrane oraz ukryty folder AppData.'
+  },
+  {
+    id: 'program_data',
+    path: 'C:\\ProgramData',
+    name: 'ProgramData (Ukryte Dane Współdzielone)',
+    category: 'Wspólna Konfiguracja',
+    purpose: 'Przechowuje ustawienia, szablony, licencje i bazy danych aplikacji, które muszą być wspólne dla wszystkich użytkowników danego komputera.',
+    importance: 'Systemowo-Aplikacyjna (Ukryty)',
+    importanceColor: 'bg-purple-100 text-purple-800 border-purple-200',
+    contents: ['Ustawienia antywirusa', 'Wspólne bazy szablonów', 'Pliki licencyjne programów'],
+    equivalentInOtherOS: 'W Linuxie odpowiednikiem jest katalog /var/lib lub /etc.',
+    proTip: 'Folder ten ma ustawiony atrybut "Ukryty", aby zapobiec przypadkowemu skasowaniu przez mniej doświadczonych użytkowników.',
+    speechText: 'ProgramData to ukryty folder z ustawieniami i szablonami aplikacji, które są wspólne dla wszystkich kont na danym komputerze.'
+  }
+];
+
+export const STRUCTURE_LIN_ITEMS: DirectoryStructureItem[] = [
+  {
+    id: 'root_dir',
+    path: '/',
+    name: 'Katalog Główny (Root Directory / Korzeń)',
+    category: 'Szczyt Hierarchii / Fundament FHS',
+    purpose: 'Początek i korzeń całego jednolitego drzewa plików w systemie Linux. Wszystkie pliki, foldery i podłączone dyski wyrastają z tego jednego miejsca.',
+    importance: 'Absolutny Fundament Systemu',
+    importanceColor: 'bg-red-100 text-red-800 border-red-300 font-bold',
+    contents: ['bin', 'boot', 'dev', 'etc', 'home', 'lib', 'media', 'mnt', 'opt', 'proc', 'root', 'sbin', 'sys', 'tmp', 'usr', 'var'],
+    equivalentInOtherOS: 'W Windows nie ma jednego korzenia – każdy dysk (C:, D:) tworzy własne niezależne drzewo.',
+    proTip: 'W terminalu polecenie cd / natychmiast przenosi Cię na sam szczyt drzewa katalogów!',
+    speechText: 'Pojedynczy ukośnik to korzeń systemu Linux. W Linuksie nie ma liter dysków, wszystkie foldery i urządzenia wyrastają z tego jednego korzenia.'
+  },
+  {
+    id: 'home',
+    path: '/home/ [nazwa_uzytkownika]',
+    name: '/home (Katalogi Domowe Użytkowników)',
+    category: 'Prywatna Przestrzeń Użytkownika',
+    purpose: 'Prywatny dom każdego zwykłego użytkownika (np. /home/uczen). Tutaj tworzysz, zapisujesz i pobierasz wszystkie swoje pliki.',
+    importance: 'Twoje Pliki i Dokumenty',
+    importanceColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    contents: ['Desktop (Pulpit)', 'Documents (Dokumenty)', 'Downloads (Pobrane)', 'Pictures (Obrazy)', 'Music', '.bashrc (ukryty)', '.config (ukryty)'],
+    equivalentInOtherOS: 'W systemie Windows odpowiada mu ścieżka C:\\Users\\NazwaUzytkownika.',
+    proTip: 'W Linuksie znak tyldy ~ jest skrótem do Twojego katalogu domowego! Polecenie cd ~ zawsze zabierze Cię prosto do domu.',
+    speechText: 'Katalog home zawiera foldery domowe wszystkich użytkowników. Tutaj przechowujesz swoje dokumenty, pobrane pliki i prywatne ustawienia.'
+  },
+  {
+    id: 'root_user',
+    path: '/root',
+    name: '/root (Katalog Superużytkownika Administratora)',
+    category: 'Prywatny Folder Administratora',
+    purpose: 'Osobisty katalog domowy głównego administratora systemu (użytkownika o nazwie root).',
+    importance: 'Ściśle Tajny / Administrator',
+    importanceColor: 'bg-red-100 text-red-800 border-red-200',
+    contents: ['Skrypty administracyjne', 'Klucze bezpieczeństwa', 'Kopie zapasowe konfiguracji'],
+    equivalentInOtherOS: 'W Windows administratorzy również mają profil w C:\\Users\\Administrator.',
+    proTip: 'Uwaga na różnicę: "/" to korzeń całego drzewa (root directory), a "/root" to prywatny folder użytkownika root!',
+    speechText: 'Folder ukośnik root to prywatny katalog domowy administratora całego systemu. Zwykli użytkownicy nie mają do niego dostępu.'
+  },
+  {
+    id: 'bin_usr',
+    path: '/bin & /usr/bin',
+    name: '/bin & /usr/bin (Programy i Podstawowe Komendy)',
+    category: 'Pliki Wykonywalne (Binaries)',
+    purpose: 'Przechowuje programy i polecenia dostępne dla każdego użytkownika bez wyjątku (ls, cat, cp, mkdir, bash, python, firefox).',
+    importance: 'Niezbędne do pracy',
+    importanceColor: 'bg-blue-100 text-blue-800 border-blue-200',
+    contents: ['ls', 'mkdir', 'cp', 'rm', 'cat', 'bash', 'nano', 'python3', 'firefox', 'gcc'],
+    equivalentInOtherOS: 'W Windows odpowiada połączeniu C:\\Windows\\System32 oraz C:\\Program Files.',
+    proTip: 'Gdy wpisujesz w terminalu "ls", system szuka pliku wykonywalnego "ls" właśnie w katalogu /bin lub /usr/bin!',
+    speechText: 'Katalogi bin oraz usr bin przechowują programy i komendy terminala dostępne dla każdego użytkownika, na przykład komendy ls, mkdir czy przeglądarkę Firefox.'
+  },
+  {
+    id: 'sbin',
+    path: '/sbin & /usr/sbin',
+    name: '/sbin & /usr/sbin (Narzędzia Administracyjne)',
+    category: 'Komendy Systemowe Admina',
+    purpose: 'Programy i narzędzia systemowe przeznaczone wyłącznie dla administratora (root) do zarządzania sprzętem, partycjami i siecią.',
+    importance: 'Narzędzia Admina',
+    importanceColor: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+    contents: ['fdisk (partycjonowanie)', 'reboot (restart)', 'shutdown (wyłączenie)', 'iptables (firewall)', 'useradd (nowe konta)'],
+    equivalentInOtherOS: 'W Windows to narzędzia administracyjne jak diskpart, dism czy Zarządzanie komputerem.',
+    proTip: 'Litera "s" na początku oznacza "system binaries" lub "superuser binaries".',
+    speechText: 'Katalogi sbin zawierają narzędzia administracyjne przeznaczone dla administratora root, takie jak partycjonowanie dysków czy restart systemu.'
+  },
+  {
+    id: 'etc',
+    path: '/etc',
+    name: '/etc (Globalne Pliki Konfiguracyjne)',
+    category: 'Konfiguracja i Ustawienia',
+    purpose: 'Przechowuje wszystkie tekstowe pliki konfiguracyjne systemu i zainstalowanych programów (bazy kont, ustawienia sieci, reguły zapory).',
+    importance: 'Kluczowa Konfiguracja',
+    importanceColor: 'bg-amber-100 text-amber-800 border-amber-200',
+    contents: ['/etc/passwd (lista użytkowników)', '/etc/hostname (nazwa komputera)', '/etc/network/interfaces', '/etc/fstab (dyski i montowanie)'],
+    equivalentInOtherOS: 'W Windowsie konfiguracja jest przechowywana w Rejestrze Windows (Registry) oraz plikach .ini.',
+    proTip: 'Wszystkie pliki w /etc to zwykłe pliki tekstowe! Możesz je podejrzeć komendą cat lub edytować w nano (z uprawnieniem sudo).',
+    speechText: 'Katalog etc przechowuje ogólnosystemowe pliki konfiguracyjne w postaci zwykłych plików tekstowych, na przykład listę użytkowników czy ustawienia sieci.'
+  },
+  {
+    id: 'var',
+    path: '/var',
+    name: '/var (Zmienne Dane i Dzienniki Logów)',
+    category: 'Dynamiczne Dane i Logi',
+    purpose: 'Katalog na pliki, których rozmiar i treść stale się zmieniają podczas pracy komputera (logi zdarzeń, bazy danych, kolejki poczty).',
+    importance: 'Diagnostyka i Logi',
+    importanceColor: 'bg-purple-100 text-purple-800 border-purple-200',
+    contents: ['/var/log/syslog (dziennik systemu)', '/var/log/auth.log (próby logowania)', '/var/www (pliki stron WWW)', '/var/mail'],
+    equivalentInOtherOS: 'W Windows odpowiada Podglądowi zdarzeń (Event Viewer) oraz C:\\ProgramData.',
+    proTip: 'Gdy system działa niestabilnie, administrator zawsze zagląda do /var/log, by sprawdzić komunikaty o błędach!',
+    speechText: 'Katalog var przechowuje zmienne dane i dzienniki logów, w których zapisywane są wszystkie błędy i zdarzenia w systemie.'
+  },
+  {
+    id: 'tmp',
+    path: '/tmp',
+    name: '/tmp (Pliki Tymczasowe - Temporary)',
+    category: 'Pliki Tymczasowe',
+    purpose: 'Wspólna przestrzeń na pliki tymczasowe tworzone przez programy. Każdy użytkownik ma do niego prawo zapisu.',
+    importance: 'Tymczasowa (Auto-czyszczona)',
+    importanceColor: 'bg-gray-100 text-gray-800 border-gray-200',
+    contents: ['Tymczasowe bufory edytorów', 'Skrawki pobieranych plików', 'Gniazda procesów (sockets)'],
+    equivalentInOtherOS: 'W Windowsie odpowiada folderom C:\\Windows\\Temp oraz %TEMP% użytkownika.',
+    proTip: 'Nigdy nie trzymaj w /tmp ważnych plików domowych! Ten folder jest automatycznie opróżniany przy każdym restarcie komputera!',
+    speechText: 'Katalog tmp to przestrzeń na pliki tymczasowe tworzone przez programy. Pamiętaj, że ten folder jest automatycznie czyszczony po restarcie komputera!'
+  },
+  {
+    id: 'dev',
+    path: '/dev',
+    name: '/dev (Pliki Urządzeń - Hardware)',
+    category: 'Sprzęt i Urządzenia',
+    purpose: 'Reprezentuje wszystkie fizyczne i wirtualne urządzenia w komputerze jako zwykłe pliki (zasada: "Wszystko jest plikiem").',
+    importance: 'Sprzęt i Peryferia',
+    importanceColor: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+    contents: ['/dev/sda (główny dysk)', '/dev/sdb1 (partycja na pendrive)', '/dev/input/mice (mysz)', '/dev/null (czarna dziura na dane)'],
+    equivalentInOtherOS: 'W Windowsie sprzętem zarządza Menedżer Urządzeń (Device Manager).',
+    proTip: '/dev/null to słynny wirtualny plik w Linuksie – cokolwiek do niego wyślesz, znika bezpowrotnie bez zajmowania miejsca na dysku!',
+    speechText: 'Katalog dev reprezentuje podłączony sprzęt jako specjalne pliki. Dysk to sda, mysz to mice, a dev null to czarna dziura na niechciane komunikaty.'
+  },
+  {
+    id: 'media_mnt',
+    path: '/media & /mnt',
+    name: '/media & /mnt (Punkty Montowania Nośników)',
+    category: 'Nośniki Zewnętrzne',
+    purpose: 'Miejsca w drzewie plików, pod które system "podczepia" włożone pendrive\'y, karty SD, płyty CD oraz zewnętrzne dyski sieciowe.',
+    importance: 'Pendrive i Dyski Zewnętrzne',
+    importanceColor: 'bg-teal-100 text-teal-800 border-teal-200',
+    contents: ['/media/uczen/PENDRIVE_16GB', '/mnt/dysk_kopia', '/mnt/udzial_sieciowy'],
+    equivalentInOtherOS: 'W Windows podłączony pendrive otrzymuje osobną literę dysku, np. E: lub F:.',
+    proTip: '/media służy do nośników montowanych automatycznie przez system graficzny, a /mnt do montowania ręcznego przez administratora.',
+    speechText: 'Katalogi media oraz mnt to punkty montowania nośników zewnętrznych. Podłączony pendrive staje się po prostu kolejnym folderem w drzewie.'
+  },
+  {
+    id: 'boot',
+    path: '/boot',
+    name: '/boot (Pliki Rozruchowe i Jądro Linux)',
+    category: 'Rozruch Komputera',
+    purpose: 'Zawiera pliki niezbędne do wystartowania komputera: jądro systemu (Linux Kernel), obrazy initramfs oraz menu rozruchowe GRUB.',
+    importance: 'Krytyczna Rozruchowa',
+    importanceColor: 'bg-red-100 text-red-800 border-red-200',
+    contents: ['vmlinuz (skompresowane jądro Linuksa)', 'initrd.img', 'grub/grub.cfg'],
+    equivalentInOtherOS: 'W Windows odpowiada ukrytej partycji rozruchowej EFI (Bootloader BCD).',
+    proTip: 'Folder /boot jest często umieszczany na osobnej, małej i bezpiecznej partycji dysku.',
+    speechText: 'Katalog boot zawiera jądro systemu operacyjnego Linux oraz pliki rozruchowe potrzebne do włączenia komputera.'
+  },
+  {
+    id: 'proc_sys',
+    path: '/proc & /sys',
+    name: '/proc & /sys (Wirtualne Statystyki RAM i Jądra)',
+    category: 'Wirtualny Stan RAM/CPU',
+    purpose: 'Wirtualne katalogi generowane na bieżąco w pamięci RAM przez jądro Linuksa, pokazujące parametry procesora, pamięci i procesów.',
+    importance: 'Wirtualna Diagnostyka',
+    importanceColor: 'bg-slate-100 text-slate-800 border-slate-200',
+    contents: ['/proc/cpuinfo (model i rdzenie CPU)', '/proc/meminfo (dostępny RAM)', '/proc/version (wersja jądra)'],
+    equivalentInOtherOS: 'W Windowsie odpowiada Menedżerowi Zadań i informacjom diagnostycznym WMI.',
+    proTip: 'Pliki te mają rozmiar 0 bajtów na dysku, bo istnieją tylko w pamięci RAM! Komenda "cat /proc/cpuinfo" wyświetli parametry Twojego procesora.',
+    speechText: 'Katalogi proc oraz sys to wirtualne systemy plików tworzone w pamięci RAM. Pokazują one w czasie rzeczywistym zużycie procesora i pamięci operacyjnej.'
+  }
+];
+
+export interface StructureComparisonItem {
+  feature: string;
+  windows: string;
+  linux: string;
+  importance: 'Kluczowe' | 'Ważne' | 'Ciekawostka';
+  badgeColor: string;
+  description: string;
+}
+
+export const STRUCTURE_COMPARISON_ITEMS: StructureComparisonItem[] = [
+  {
+    feature: 'Punkt Wyjścia (Korzeń Systemu)',
+    windows: 'Wiele liter dysków (C:\\, D:\\, E:\\) – każdy dysk to osobne drzewo',
+    linux: 'Jedno wspólne drzewo zaczynające się od korzenia / (root). Brak liter dysków!',
+    importance: 'Kluczowe',
+    badgeColor: 'bg-red-100 text-red-800 border-red-200',
+    description: 'W Windows każdy fizyczny dysk lub partycja tworzy własną hierarchię. W Linuksie wszystkie nośniki są montowane wewnątrz jednego wielkiego drzewa korzenia /.'
+  },
+  {
+    feature: 'Separator w Ścieżce Dostępu',
+    windows: 'Lewy ukośnik \\ (Backslash), np. C:\\Users\\Jan',
+    linux: 'Prawy ukośnik / (Slash), np. /home/jan',
+    importance: 'Kluczowe',
+    badgeColor: 'bg-blue-100 text-blue-800 border-blue-200',
+    description: 'Ukośnik lewy w Windows wywodzi się z systemu MS-DOS. Prawy ukośnik w Linuksie to międzynarodowy standard Uniksa oraz adresów internetowych (URL).'
+  },
+  {
+    feature: 'Wielkość Liter (Case Sensitivity)',
+    windows: 'Ignorowana (Case-insensitive) – plik.txt i Plik.TXT to ten sam plik',
+    linux: 'Ściśle rozróżniana (Case-sensitive) – plik.txt, Plik.txt i PLIK.TXT to 3 różne pliki!',
+    importance: 'Kluczowe',
+    badgeColor: 'bg-purple-100 text-purple-800 border-purple-200',
+    description: 'W Linuksie możesz mieć w jednym folderze wiele plików o tej samej nazwie, jeśli różnią się chociaż jedną wielką/małą literą. W Windows system nie pozwoli na ich jednoczesne utworzenie.'
+  },
+  {
+    feature: 'Folder Domowy Użytkownika',
+    windows: 'C:\\Users\\NazwaKonta (w Eksploratorze: Użytkownicy)',
+    linux: '/home/nazwa_konta (oraz /root dla administratora)',
+    importance: 'Ważne',
+    badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    description: 'W obu systemach prywatne pliki ucznia leżą w osobnym profilu domowym, zabezpieczonym przed podglądaniem przez innych użytkowników.'
+  },
+  {
+    feature: 'Domyślne Miejsce Instalacji Programów',
+    windows: 'C:\\Program Files oraz C:\\Program Files (x86)',
+    linux: '/bin, /usr/bin, /opt oraz pakiety systemowe',
+    importance: 'Ważne',
+    badgeColor: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+    description: 'W Windows programy zazwyczaj instalują się w jednym zwartym folderze. W Linuksie pliki wykonywalne trafiają do /usr/bin, a ich ikony i szablony do /usr/share.'
+  },
+  {
+    feature: 'Jak System Wie, że Plik Jest Programem?',
+    windows: 'Po rozszerzeniu nazwy pliku (.exe, .bat, .cmd, .msi)',
+    linux: 'Po bicie uprawnień wykonywania (+x / chmod +x), rozszerzenie jest opcjonalne',
+    importance: 'Kluczowe',
+    badgeColor: 'bg-amber-100 text-amber-800 border-amber-200',
+    description: 'W Linuksie możesz nazwać skrypt "moj_program" bez żadnego rozszerzenia – dopóki ma nadane uprawnienie wykonywania (chmod +x), uruchomi się jak program!'
+  },
+  {
+    feature: 'Pliki i Foldery Ukryte',
+    windows: 'Atrybut "Ukryty" włączany we Właściwościach pliku',
+    linux: 'Kropka na początku nazwy pliku (np. .bashrc, .tajne)',
+    importance: 'Ważne',
+    badgeColor: 'bg-teal-100 text-teal-800 border-teal-200',
+    description: 'W Linuksie wystarczy zmienić nazwę pliku na .notatka.txt, a natychmiast zniknie ze standardowego widoku (zobaczysz go komendą ls -a).'
+  },
+  {
+    feature: 'Obsługa Pendrive\'ów i Dysków USB',
+    windows: 'Otrzymuje nową literę dysku (np. E:\\, F:\\)',
+    linux: 'Montowany jako zwykły folder w /media lub /mnt',
+    importance: 'Ważne',
+    badgeColor: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+    description: 'W Linuksie nie ma wyskakujących nowych dysków E:. Pendrive pojawia się jako ścieżka /media/uczen/PENDRIVE i zachowuje się jak zwykły katalog.'
+  },
+  {
+    feature: 'Gdzie Znajdują się Ustawienia i Konfiguracje?',
+    windows: 'Rejestr Windows (Registry) oraz foldery AppData i ProgramData',
+    linux: 'Przejrzyste pliki tekstowe w katalogu /etc oraz ~/.config',
+    importance: 'Ważne',
+    badgeColor: 'bg-blue-100 text-blue-800 border-blue-200',
+    description: 'W Linuksie administrator może edytować każdą konfigurację w Notatniku lub Nano, ponieważ to zwykłe pliki tekstowe.'
+  },
+  {
+    feature: 'Główne Systemy Plików',
+    windows: 'NTFS (na dyskach), FAT32 / exFAT (na pendrive)',
+    linux: 'ext4, Btrfs, XFS',
+    importance: 'Ciekawostka',
+    badgeColor: 'bg-gray-100 text-gray-800 border-gray-200',
+    description: 'NTFS to flagowy format Microsoftu z uprawnieniami ACL. ext4 to sprawdzony, ultraszybki format domyślny większości dystrybucji Linuxa.'
+  }
+];
+
+export interface StructureTrainerQuestion {
+  id: number;
+  pathOrFolder: string;
+  correctOS: 'windows' | 'linux';
+  badgeLabel: string;
+  explanation: string;
+}
+
+export const STRUCTURE_TRAINER_QUESTIONS: StructureTrainerQuestion[] = [
+  {
+    id: 1,
+    pathOrFolder: 'C:\\Windows\\System32\\drivers',
+    correctOS: 'windows',
+    badgeLabel: 'Ścieżka z literą dysku i backslashem',
+    explanation: 'Litera dysku C:\\ oraz lewe ukośniki (backslash) to cecha charakterystyczna systemu Windows.'
+  },
+  {
+    id: 2,
+    pathOrFolder: '/var/log/syslog',
+    correctOS: 'linux',
+    badgeLabel: 'Dziennik zdarzeń z korzeniem /',
+    explanation: 'Katalog /var/log przechowuje dzienniki logów w systemie Linux i rozpoczyna się od korzenia /.'
+  },
+  {
+    id: 3,
+    pathOrFolder: 'C:\\Program Files (x86)\\Steam',
+    correctOS: 'windows',
+    badgeLabel: 'Folder kompatybilności 32-bit',
+    explanation: 'Katalog Program Files (x86) to unikalny folder instalacyjny starszych aplikacji 32-bitowych w Windowsie.'
+  },
+  {
+    id: 4,
+    pathOrFolder: '/home/uczen/.bashrc',
+    correctOS: 'linux',
+    badgeLabel: 'Profil domowy i ukryty plik z kropką',
+    explanation: 'Katalog /home to profile użytkowników w Linuxie, a kropka przed .bashrc oznacza plik ukryty.'
+  },
+  {
+    id: 5,
+    pathOrFolder: '/dev/sda1',
+    correctOS: 'linux',
+    badgeLabel: 'Plik reprezentujący partycję dysku',
+    explanation: 'W Linuxie wszystko jest plikiem – partycja dysku twardego znajduje się w katalogu /dev.'
+  },
+  {
+    id: 6,
+    pathOrFolder: 'C:\\Users\\Marek\\AppData\\Roaming',
+    correctOS: 'windows',
+    badgeLabel: 'Profil użytkownika i AppData',
+    explanation: 'Katalog C:\\Users oraz ukryty folder AppData to struktura profilu użytkownika w Windows.'
+  },
+  {
+    id: 7,
+    pathOrFolder: '/etc/passwd',
+    correctOS: 'linux',
+    badgeLabel: 'Plik konfiguracyjny z bazą kont',
+    explanation: 'Katalog /etc w Linuksie zawiera globalne pliki konfiguracyjne, w tym listę kont w passwd.'
+  },
+  {
+    id: 8,
+    pathOrFolder: 'E:\\Gry\\Minecraft\\saves',
+    correctOS: 'windows',
+    badgeLabel: 'Dodatkowy dysk E:\\ z backslashami',
+    explanation: 'Litery dysków takie jak D: czy E: występują wyłącznie w systemie Windows.'
+  }
+];
 
 export interface ShortcutItem {
   id: string;
@@ -432,6 +868,105 @@ const ALL_QUIZ_QUESTIONS: QuizQuestion[] = [
     ],
     correct: 1,
     explanation: 'W konsoli Linux skrót Ctrl+C wysyła sygnał przerwania procesu (SIGINT), dlatego do operacji schowka klawiatura wymaga dodatkowego klawisza Shift (Ctrl+Shift+C / Ctrl+Shift+V).'
+  },
+  {
+    id: 15,
+    question: '🏠 W jakim katalogu w systemie Linux domyślnie znajdują się prywatne pliki i foldery użytkowników (np. Dokumenty, Pobrane)?',
+    options: [
+      '/Users/konto',
+      '/home/nazwa_uzytkownika',
+      '/etc/users'
+    ],
+    correct: 1,
+    explanation: 'W systemie Linux katalogi domowe użytkowników znajdują się w /home (np. /home/uczen). Odpowiada to folderowi C:\\Users w systemie Windows.'
+  },
+  {
+    id: 16,
+    question: '🔤 Czy w systemie Linux w jednym folderze mogą jednocześnie istnieć dwa różne pliki o nazwach "zadanie.txt" oraz "Zadanie.TXT"?',
+    options: [
+      'Nie, system zgłosi błąd, że plik o takiej nazwie już istnieje',
+      'Tak, ponieważ system plików w Linuksie ściśle rozróżnia wielkość liter (Case-sensitive)',
+      'Tylko jeśli jeden z nich jest w Koszu'
+    ],
+    correct: 1,
+    explanation: 'Linux jest systemem "Case-sensitive" – ściśle rozróżnia małe i wielkie litery, więc pliki "zadanie.txt", "Zadanie.txt" i "ZADANIE.TXT" to 3 zupełnie różne, niezależne pliki! W Windowsie wielkość liter w nazwach jest ignorowana.'
+  },
+  {
+    id: 17,
+    question: '⚙️ Co zawiera kluczowy katalog "C:\\Windows\\System32" w systemie Windows 11?',
+    options: [
+      'Stare gry komputerowe z lat 90.',
+      'Pliki jądra systemu, kluczowe biblioteki DLL, sterowniki oraz podstawowe programy (np. cmd.exe, calc.exe)',
+      'Prywatne zdjęcia i wypracowania zalogowanego ucznia'
+    ],
+    correct: 1,
+    explanation: 'Katalog C:\\Windows\\System32 to serce systemu Windows – zawiera najważniejsze pliki systemowe, biblioteki DLL i narzędzia. Jego usunięcie spowodowałoby natychmiastowe uszkodzenie systemu!'
+  },
+  {
+    id: 18,
+    question: '📝 Gdzie w systemie Linux przechowywane są ogólnosystemowe pliki konfiguracyjne programów i usług?',
+    options: [
+      'W katalogu /etc',
+      'W katalogu /bin',
+      'W katalogu /tmp'
+    ],
+    correct: 0,
+    explanation: 'Katalog /etc (et cetera / editable text configurations) przechowuje wszystkie globalne pliki konfiguracyjne systemu Linux i zainstalowanych aplikacji.'
+  },
+  {
+    id: 19,
+    question: '👁️‍🗨️ W jaki sposób w systemie Linux tworzy się ukryty plik lub folder?',
+    options: [
+      'Trzeba kliknąć prawym przyciskiem i zaznaczyć atrybut "Zablokuj"',
+      'Wystarczy dodać kropkę na samym początku nazwy, np. ".tajny_folder" lub ".bashrc"',
+      'Pliki w Linuksie nie mogą być ukryte'
+    ],
+    correct: 1,
+    explanation: 'W systemie Linux każdy plik lub katalog, którego nazwa rozpoczyna się od kropki (np. .config, .bashrc), jest automatycznie traktowany jako ukryty. Aby go zobaczyć, używamy komendy ls -a.'
+  },
+  {
+    id: 20,
+    question: '🔌 W jaki sposób system Linux obsługuje podłączone pamięci USB (pendrive) i dodatkowe dyski?',
+    options: [
+      'Przypisuje im automatycznie litery dysków E: i F:',
+      'Montuje je jako podfoldery w drzewie plików (np. w katalogu /media lub /mnt)',
+      'Wymaga skasowania głównego dysku C:'
+    ],
+    correct: 1,
+    explanation: 'W Linuksie nie ma liter dysków! Wszystkie zewnętrzne nośniki i partycje są montowane (włączane) jako zwykłe foldery w nadrzędnym drzewie korzenia /, zazwyczaj w katalogach /media lub /mnt.'
+  },
+  {
+    id: 21,
+    question: '🌐 Co oznacza słynna linuksowa zasada: "Wszystko jest plikiem" (Everything is a file)?',
+    options: [
+      'Że na pulpicie nie wolno mieć więcej niż jednego pliku',
+      'Że urządzenia sprzętowe (dyski, klawiatury), procesy i połączenia sieciowe są reprezentowane w systemie jako specjalne pliki (np. w /dev i /proc)',
+      'Że każdy folder automatycznie zamienia się w plik tekstowy'
+    ],
+    correct: 1,
+    explanation: 'W filozofii Uniksa i Linuksa urządzenia fizyczne (np. dysk /dev/sda, konsola /dev/tty) oraz stan procesów (/proc) są reprezentowane jako pliki, co pozwala programistom odczytywać i sterować nimi standardowymi narzędziami!'
+  },
+  {
+    id: 22,
+    question: '📦 Gdzie w 64-bitowym systemie Windows 11 domyślnie instalują się nowoczesne programy 64-bitowe?',
+    options: [
+      'W katalogu C:\\Program Files (a starsze 32-bitowe w Program Files (x86))',
+      'W katalogu C:\\Windows\\Kosz',
+      'W katalogu C:\\SystemVolumeInformation'
+    ],
+    correct: 0,
+    explanation: 'W 64-bitowym Windowsie programy 64-bitowe instalowane są w "C:\\Program Files", a starsze aplikacje 32-bitowe trafiają do "C:\\Program Files (x86)".'
+  },
+  {
+    id: 23,
+    question: '🧹 Jaka jest najważniejsza cecha katalogu "/tmp" w systemie Linux?',
+    options: [
+      'Służy do przechowywania haseł wszystkich użytkowników',
+      'Przechowuje pliki tymczasowe, które są automatycznie czyszczone przy ponownym uruchomieniu komputera',
+      'Nie można w nim utworzyć żadnego pliku'
+    ],
+    correct: 1,
+    explanation: 'Katalog /tmp przechowuje pliki tymczasowe (temporary). Każdy użytkownik ma do niego dostęp do zapisu, a system regularnie go czyści, np. podczas każdego restartu.'
   }
 ];
 
@@ -447,7 +982,48 @@ function getRandomSubset<T>(array: T[], size: number): T[] {
 }
 
 export default function TheorySection({ onAddXP, quizDone, setQuizDone }: TheorySectionProps) {
-  const [activeTab, setActiveTab] = useState<'basics' | 'paths' | 'terminal' | 'shortcuts' | 'quiz'>('basics');
+  const [activeTab, setActiveTab] = useState<'basics' | 'paths' | 'structure' | 'terminal' | 'shortcuts' | 'quiz'>('basics');
+  
+  // Structure interactive state
+  const [structureSubTab, setStructureSubTab] = useState<'overview' | 'windows' | 'linux' | 'compare' | 'trainer'>('overview');
+  const [selectedWinFolderId, setSelectedWinFolderId] = useState<string>('system32');
+  const [selectedLinFolderId, setSelectedLinFolderId] = useState<string>('home');
+  const [structureWinSearch, setStructureWinSearch] = useState<string>('');
+  const [structureLinSearch, setStructureLinSearch] = useState<string>('');
+  
+  // Structure Trainer mini-game state
+  const [trainerAnswers, setTrainerAnswers] = useState<Record<number, 'windows' | 'linux'>>({});
+  const [trainerScore, setTrainerScore] = useState<number>(0);
+  const [trainerFinished, setTrainerFinished] = useState<boolean>(false);
+  const [trainerAwardedXP, setTrainerAwardedXP] = useState<boolean>(false);
+
+  const handleTrainerAnswer = (qId: number, selectedOS: 'windows' | 'linux') => {
+    if (trainerAnswers[qId] !== undefined) return;
+    const q = STRUCTURE_TRAINER_QUESTIONS.find(item => item.id === qId);
+    const isCorrect = q?.correctOS === selectedOS;
+    
+    setTrainerAnswers(prev => {
+      const next = { ...prev, [qId]: selectedOS };
+      if (Object.keys(next).length === STRUCTURE_TRAINER_QUESTIONS.length) {
+        setTrainerFinished(true);
+      }
+      return next;
+    });
+
+    if (isCorrect) {
+      setTrainerScore(prev => {
+        const newScore = prev + 1;
+        return newScore;
+      });
+      onAddXP(5);
+    }
+  };
+
+  const handleResetTrainer = () => {
+    setTrainerAnswers({});
+    setTrainerScore(0);
+    setTrainerFinished(false);
+  };
   
   // Shortcuts interactive state
   const [shortcutCategory, setShortcutCategory] = useState<'all' | 'files' | 'navigation' | 'terminal' | 'clipboard'>('all');
@@ -553,7 +1129,7 @@ export default function TheorySection({ onAddXP, quizDone, setQuizDone }: Theory
       <div className="flex border-b border-[#ECEFF4] overflow-x-auto bg-[#F8FAFC]">
         <button
           onClick={() => setActiveTab('basics')}
-          className={`flex-1 py-4 px-5 text-sm font-bold border-b-2 text-center whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-2 ${
+          className={`flex-1 py-4 px-4 text-xs md:text-sm font-bold border-b-2 text-center whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 ${
             activeTab === 'basics'
               ? 'border-[#5E81AC] text-[#5E81AC] bg-white shadow-sm'
               : 'border-transparent text-[#4C566A] hover:text-[#2E3440] hover:bg-[#ECEFF4]/50'
@@ -561,11 +1137,11 @@ export default function TheorySection({ onAddXP, quizDone, setQuizDone }: Theory
           id="tab-basics-btn"
         >
           <Folder className="w-4 h-4" />
-          1. Pliki i Katalogi
+          <span>1. Pliki i Katalogi</span>
         </button>
         <button
           onClick={() => setActiveTab('paths')}
-          className={`flex-1 py-4 px-5 text-sm font-bold border-b-2 text-center whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-2 ${
+          className={`flex-1 py-4 px-4 text-xs md:text-sm font-bold border-b-2 text-center whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 ${
             activeTab === 'paths'
               ? 'border-[#5E81AC] text-[#5E81AC] bg-white shadow-sm'
               : 'border-transparent text-[#4C566A] hover:text-[#2E3440] hover:bg-[#ECEFF4]/50'
@@ -573,11 +1149,24 @@ export default function TheorySection({ onAddXP, quizDone, setQuizDone }: Theory
           id="tab-paths-btn"
         >
           <ChevronRight className="w-4 h-4" />
-          2. Ścieżki (Windows vs Linux)
+          <span>2. Ścieżki</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('structure')}
+          className={`flex-1 py-4 px-4 text-xs md:text-sm font-bold border-b-2 text-center whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 ${
+            activeTab === 'structure'
+              ? 'border-[#5E81AC] text-[#5E81AC] bg-white shadow-sm'
+              : 'border-transparent text-[#4C566A] hover:text-[#2E3440] hover:bg-[#ECEFF4]/50'
+          }`}
+          id="tab-structure-btn"
+        >
+          <FolderTree className="w-4 h-4 text-[#5E81AC]" />
+          <span>3. Struktura OS (FHS & Dyski)</span>
+          <span className="bg-sky-100 text-sky-800 text-[10px] px-1.5 py-0.5 rounded-full font-bold">Nowość</span>
         </button>
         <button
           onClick={() => setActiveTab('terminal')}
-          className={`flex-1 py-4 px-5 text-sm font-bold border-b-2 text-center whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-2 ${
+          className={`flex-1 py-4 px-4 text-xs md:text-sm font-bold border-b-2 text-center whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 ${
             activeTab === 'terminal'
               ? 'border-[#5E81AC] text-[#5E81AC] bg-white shadow-sm'
               : 'border-transparent text-[#4C566A] hover:text-[#2E3440] hover:bg-[#ECEFF4]/50'
@@ -585,11 +1174,11 @@ export default function TheorySection({ onAddXP, quizDone, setQuizDone }: Theory
           id="tab-terminal-btn"
         >
           <Terminal className="w-4 h-4" />
-          3. Komendy Terminala
+          <span>4. Komendy Terminala</span>
         </button>
         <button
           onClick={() => setActiveTab('shortcuts')}
-          className={`flex-1 py-4 px-5 text-sm font-bold border-b-2 text-center whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-2 ${
+          className={`flex-1 py-4 px-4 text-xs md:text-sm font-bold border-b-2 text-center whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 ${
             activeTab === 'shortcuts'
               ? 'border-[#5E81AC] text-[#5E81AC] bg-white shadow-sm'
               : 'border-transparent text-[#4C566A] hover:text-[#2E3440] hover:bg-[#ECEFF4]/50'
@@ -597,12 +1186,11 @@ export default function TheorySection({ onAddXP, quizDone, setQuizDone }: Theory
           id="tab-shortcuts-btn"
         >
           <Keyboard className="w-4 h-4 text-[#5E81AC]" />
-          <span>4. Skróty Klawiszowe</span>
-          <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded-full font-bold">Nowość</span>
+          <span>5. Skróty Klawiszowe</span>
         </button>
         <button
           onClick={() => setActiveTab('quiz')}
-          className={`flex-1 py-4 px-5 text-sm font-bold border-b-2 text-center whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-2 ${
+          className={`flex-1 py-4 px-4 text-xs md:text-sm font-bold border-b-2 text-center whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 ${
             activeTab === 'quiz'
               ? 'border-[#5E81AC] text-[#5E81AC] bg-white shadow-sm'
               : 'border-transparent text-[#4C566A] hover:text-[#2E3440] hover:bg-[#ECEFF4]/50'
@@ -610,7 +1198,7 @@ export default function TheorySection({ onAddXP, quizDone, setQuizDone }: Theory
           id="tab-quiz-btn"
         >
           <HelpCircle className="w-4 h-4" />
-          5. Sprawdź Wiedzę (Quiz)
+          <span>6. Quiz i Certyfikat</span>
         </button>
       </div>
 
@@ -867,7 +1455,686 @@ export default function TheorySection({ onAddXP, quizDone, setQuizDone }: Theory
           </div>
         )}
 
-        {/* Tab 3: Terminal */}
+        {/* Tab 3: Structure */}
+        {activeTab === 'structure' && (
+          <div className="space-y-6 animate-fadeIn" id="content-structure">
+            {/* Header */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <h3 className="text-xl md:text-2xl font-bold text-[#2E3440] flex items-center gap-3 flex-wrap">
+                  <div className="p-2 bg-[#5E81AC]/10 rounded-xl text-[#5E81AC]">
+                    <FolderTree className="w-7 h-7" />
+                  </div>
+                  <span>Struktura Plików i Katalogów: Windows vs Linux</span>
+                  <SpeechButton 
+                    text="Struktura plików i katalogów w systemach operacyjnych. Każdy system operacyjny organizuje dane na dysku w zupełnie inny sposób. Windows korzysta z liter dysków, takich jak C dwukropek, oraz folderów takich jak System 32 i Program Files. Linux opiera się na międzynarodowym standardzie FHS, w którym całe drzewo plików wyrasta z jednego korzenia, oznaczanego ukośnikiem. Poznaj kluczowe katalogi obu systemów i sprawdź swoje umiejętności w interaktywnym trenerze!" 
+                    size="sm" 
+                  />
+                </h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold px-3 py-1 bg-sky-100 text-sky-800 rounded-full border border-sky-200">
+                    Standard FHS & NTFS
+                  </span>
+                </div>
+              </div>
+              <p className="text-[#4C566A] leading-relaxed text-sm md:text-base">
+                Sposób organizacji danych na dysku to fundament działania każdego systemu operacyjnego. 
+                <strong> Windows</strong> traktuje każdą partycję jako niezależne drzewo z własną literą dysku (<code className="bg-sky-50 px-1 py-0.5 rounded text-sky-700 font-mono font-bold">C:\</code>, <code className="bg-sky-50 px-1 py-0.5 rounded text-sky-700 font-mono font-bold">D:\</code>), 
+                podczas gdy <strong>Linux</strong> łączy wszystkie dyski i nośniki w jedno zunifikowane drzewo wyrastające ze wspólnego korzenia (<code className="bg-purple-50 px-1 py-0.5 rounded text-purple-700 font-mono font-bold">/</code>).
+              </p>
+            </div>
+
+            {/* Sub-tabs pills */}
+            <div className="flex flex-wrap gap-2 p-1.5 bg-[#ECEFF4] rounded-2xl">
+              <button
+                onClick={() => setStructureSubTab('overview')}
+                className={`px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 ${
+                  structureSubTab === 'overview'
+                    ? 'bg-white text-[#5E81AC] shadow-sm'
+                    : 'text-[#4C566A] hover:text-[#2E3440] hover:bg-white/50'
+                }`}
+                id="subtab-structure-overview-btn"
+              >
+                <Layers className="w-4 h-4" />
+                <span>Przegląd Architektury</span>
+              </button>
+
+              <button
+                onClick={() => setStructureSubTab('windows')}
+                className={`px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 ${
+                  structureSubTab === 'windows'
+                    ? 'bg-[#0078D4] text-white shadow-sm'
+                    : 'text-[#4C566A] hover:text-[#0078D4] hover:bg-white/50'
+                }`}
+                id="subtab-structure-windows-btn"
+              >
+                <Monitor className="w-4 h-4" />
+                <span>🪟 Windows (Dyski & System32)</span>
+              </button>
+
+              <button
+                onClick={() => setStructureSubTab('linux')}
+                className={`px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 ${
+                  structureSubTab === 'linux'
+                    ? 'bg-[#E95420] text-white shadow-sm'
+                    : 'text-[#4C566A] hover:text-[#E95420] hover:bg-white/50'
+                }`}
+                id="subtab-structure-linux-btn"
+              >
+                <Terminal className="w-4 h-4" />
+                <span>🐧 Linux (Korzeń / & FHS)</span>
+              </button>
+
+              <button
+                onClick={() => setStructureSubTab('compare')}
+                className={`px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 ${
+                  structureSubTab === 'compare'
+                    ? 'bg-[#5E81AC] text-white shadow-sm'
+                    : 'text-[#4C566A] hover:text-[#5E81AC] hover:bg-white/50'
+                }`}
+                id="subtab-structure-compare-btn"
+              >
+                <Zap className="w-4 h-4" />
+                <span>⚖️ Porównanie (10 Różnic)</span>
+              </button>
+
+              <button
+                onClick={() => setStructureSubTab('trainer')}
+                className={`px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 ${
+                  structureSubTab === 'trainer'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-[#4C566A] hover:text-emerald-700 hover:bg-white/50'
+                }`}
+                id="subtab-structure-trainer-btn"
+              >
+                <Gamepad2 className="w-4 h-4" />
+                <span>🎮 Trener Ścieżek (+XP)</span>
+              </button>
+            </div>
+
+            {/* Sub-tab 1: Overview */}
+            {structureSubTab === 'overview' && (
+              <div className="space-y-6 animate-fadeIn" id="structure-overview-content">
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Windows Philosophy Card */}
+                  <div className="border-2 border-sky-200 bg-sky-50/40 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-2 bg-[#0078D4] text-white rounded-xl">
+                            <HardDrive className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-sky-950 text-lg">Architektura Windows</h4>
+                            <p className="text-xs text-sky-700 font-medium">Model Woluminów Literowych (C:, D:, E:)</p>
+                          </div>
+                        </div>
+                        <SpeechButton text="Architektura Windows opiera się na literach dysków. Każdy dysk twardy, pendrive czy płyta CD otrzymuje osobną literę. Główne katalogi to Windows z plikami systemowymi, Program Files na aplikacje oraz Users na pliki prywatne." size="xs" />
+                      </div>
+
+                      <p className="text-xs md:text-sm text-gray-700 leading-relaxed">
+                        W systemie Windows każdy fizyczny dysk lub partycja otrzymuje dedykowaną <strong>literę woluminu</strong>. Główny system operacyjny instaluje się na dysku <code className="font-mono font-bold text-sky-800 bg-sky-100 px-1 py-0.5 rounded">C:\</code>.
+                      </p>
+
+                      {/* Visual Mini Tree Windows */}
+                      <div className="bg-gray-900 text-white p-4 rounded-2xl font-mono text-xs space-y-1 shadow-inner border border-sky-900">
+                        <div className="text-sky-400 font-bold flex items-center gap-1">
+                          <span>📁</span> C:\ (Dysk Główny)
+                        </div>
+                        <div className="pl-4 text-gray-300">
+                          ├── 📁 <span className="text-amber-300 font-semibold">Windows</span> <span className="text-gray-500">(System operacyjny)</span>
+                        </div>
+                        <div className="pl-8 text-gray-400">
+                          └── 📁 <span className="text-red-400 font-bold">System32</span> <span className="text-gray-500">(Jądro, cmd.exe, DLL)</span>
+                        </div>
+                        <div className="pl-4 text-gray-300">
+                          ├── 📁 <span className="text-blue-300 font-semibold">Program Files</span> <span className="text-gray-500">(Aplikacje 64-bit)</span>
+                        </div>
+                        <div className="pl-4 text-gray-300">
+                          ├── 📁 <span className="text-indigo-300 font-semibold">Program Files (x86)</span> <span className="text-gray-500">(Aplikacje 32-bit)</span>
+                        </div>
+                        <div className="pl-4 text-gray-300">
+                          ├── 📁 <span className="text-emerald-300 font-semibold">Users</span> <span className="text-gray-500">(Profile użytkowników)</span>
+                        </div>
+                        <div className="pl-8 text-gray-400">
+                          └── 📁 <span className="text-emerald-400">Uczen</span> <span className="text-gray-500">(Pulpit, Dokumenty, AppData)</span>
+                        </div>
+                        <div className="pl-4 text-gray-300">
+                          └── 📁 <span className="text-purple-300">ProgramData</span> <span className="text-gray-500">(Ukryte wspólne dane)</span>
+                        </div>
+                      </div>
+
+                      <div className="bg-white/80 p-3.5 rounded-xl border border-sky-100 text-xs text-sky-950 space-y-1">
+                        <div className="font-bold flex items-center gap-1.5 text-sky-900">
+                          <CheckCircle2 className="w-4 h-4 text-sky-600" /> Backslash jako separator:
+                        </div>
+                        <p className="text-gray-600 pl-5 font-mono">C:\Windows\System32\notepad.exe</p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setStructureSubTab('windows')}
+                      className="mt-4 w-full py-2.5 px-4 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs md:text-sm font-bold transition flex items-center justify-center gap-2 shadow-sm"
+                    >
+                      <span>Eksploruj foldery Windows</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Linux Philosophy Card */}
+                  <div className="border-2 border-purple-200 bg-purple-50/40 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-2 bg-[#E95420] text-white rounded-xl">
+                            <FolderTree className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-purple-950 text-lg">Architektura Linux (FHS)</h4>
+                            <p className="text-xs text-purple-700 font-medium">Standard Hierarchii Jednego Korzenia (/)</p>
+                          </div>
+                        </div>
+                        <SpeechButton text="Architektura Linux opiera się na standardzie FHS i pojedynczym korzeniu oznaczanym ukośnikiem. Wszystkie programy, konfiguracje, logi i podłączone dyski USB wyrastają z tego jednego miejsca. W Linuksie obowiązuje słynna zasada: wszystko jest plikiem." size="xs" />
+                      </div>
+
+                      <p className="text-xs md:text-sm text-gray-700 leading-relaxed">
+                        W systemie Linux nie ma liter dysków. Wszystkie partycje, dyski twarde i nośniki USB są <strong>montowane</strong> jako gałęzie wewnątrz jednego wielkiego drzewa korzenia <code className="font-mono font-bold text-purple-800 bg-purple-100 px-1 py-0.5 rounded">/</code>.
+                      </p>
+
+                      {/* Visual Mini Tree Linux */}
+                      <div className="bg-gray-900 text-white p-4 rounded-2xl font-mono text-xs space-y-1 shadow-inner border border-purple-900">
+                        <div className="text-purple-400 font-bold flex items-center gap-1">
+                          <span>🌳</span> / (Root - Korzeń Całego Systemu)
+                        </div>
+                        <div className="pl-4 text-gray-300">
+                          ├── 📁 <span className="text-emerald-300 font-semibold">home</span> <span className="text-gray-500">(/home/uczen - profile użytkowników)</span>
+                        </div>
+                        <div className="pl-4 text-gray-300">
+                          ├── 📁 <span className="text-red-400 font-bold">root</span> <span className="text-gray-500">(Katalog domowy administratora)</span>
+                        </div>
+                        <div className="pl-4 text-gray-300">
+                          ├── 📁 <span className="text-blue-300 font-semibold">bin & usr/bin</span> <span className="text-gray-500">(Komendy: ls, bash, python)</span>
+                        </div>
+                        <div className="pl-4 text-gray-300">
+                          ├── 📁 <span className="text-amber-300 font-semibold">etc</span> <span className="text-gray-500">(Tekstowe pliki konfiguracyjne)</span>
+                        </div>
+                        <div className="pl-4 text-gray-300">
+                          ├── 📁 <span className="text-purple-300 font-semibold">var</span> <span className="text-gray-500">(/var/log - logi zdarzeń i błędów)</span>
+                        </div>
+                        <div className="pl-4 text-gray-300">
+                          ├── 📁 <span className="text-cyan-300 font-semibold">dev</span> <span className="text-gray-500">(Pliki urządzeń: /dev/sda, mysz)</span>
+                        </div>
+                        <div className="pl-4 text-gray-300">
+                          └── 📁 <span className="text-teal-300 font-semibold">media & mnt</span> <span className="text-gray-500">(Podłączone pendrive\'y)</span>
+                        </div>
+                      </div>
+
+                      <div className="bg-white/80 p-3.5 rounded-xl border border-purple-100 text-xs text-purple-950 space-y-1">
+                        <div className="font-bold flex items-center gap-1.5 text-purple-900">
+                          <CheckCircle2 className="w-4 h-4 text-purple-600" /> Slash (prawy ukośnik) jako separator:
+                        </div>
+                        <p className="text-gray-600 pl-5 font-mono">/home/uczen/Documents/projekt.txt</p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setStructureSubTab('linux')}
+                      className="mt-4 w-full py-2.5 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs md:text-sm font-bold transition flex items-center justify-center gap-2 shadow-sm"
+                    >
+                      <span>Eksploruj foldery Linux FHS</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Kids Corner Metaphor */}
+                <div className="bg-amber-50/70 border border-amber-200 rounded-3xl p-6 md:p-8 space-y-4 shadow-sm relative overflow-hidden">
+                  <div className="absolute right-4 top-4 text-6xl opacity-10 select-none pointer-events-none">🏰</div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="text-2xl">🏰🌳</span>
+                    <h4 className="text-lg font-extrabold text-amber-900">Opowieść o Dwóch Królestwach (Dla Klas 1-3!)</h4>
+                    <SpeechButton 
+                      text="Bajka o dwóch królestwach. Wyobraź sobie, że Windows to wielkie miasto z wieloma osobnymi wieżowcami. Każdy wieżowiec ma swoją literę: kamienica C to zamek króla, kamienica D to skład gier, a kamienica E to wózek na kółkach z pendrivem! Natomiast Linux to jedno wielkie, prastare magiczne Drzewo Świata. Na samym dole jest korzeń oznaczony ukośnikiem. Wszystkie gałęzie, dziuple z zabawkami i ptasie gniazda wyrastają z tego jednego pnia!" 
+                      size="xs" 
+                    />
+                  </div>
+                  
+                  <div className="grid sm:grid-cols-2 gap-4 mt-2">
+                    <div className="bg-white p-4 rounded-2xl border border-amber-100 space-y-2">
+                      <div className="font-bold text-sky-900 text-sm flex items-center gap-2">
+                        <span>🏢</span> Królestwo Windows: Miasteczko Wieżowców
+                      </div>
+                      <p className="text-xs text-gray-600 leading-relaxed">
+                        Każdy dysk to osobny budynek: wieżowiec <code className="font-bold text-sky-600">C:</code>, wieżowiec <code className="font-bold text-sky-600">D:</code>. 
+                        Gdy wkładasz pendrive, na podwórku staje nowy mały namiot <code className="font-bold text-sky-600">E:</code>.
+                      </p>
+                    </div>
+                    
+                    <div className="bg-white p-4 rounded-2xl border border-amber-100 space-y-2">
+                      <div className="font-bold text-purple-900 text-sm flex items-center gap-2">
+                        <span>🌳</span> Królestwo Linux: Drzewo Świata
+                      </div>
+                      <p className="text-xs text-gray-600 leading-relaxed">
+                        Wszystko rośnie na jednym pniu z korzeniem <code className="font-bold text-purple-600">/</code>. 
+                        Nawet gdy podłączysz pendrive, staje się on po prostu nową gałązką w dziupli <code className="font-bold text-purple-600">/media</code>!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Sub-tab 2: Windows Folders Browser */}
+            {structureSubTab === 'windows' && (
+              <div className="space-y-6 animate-fadeIn" id="structure-windows-content">
+                {/* Search and count bar */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-sky-50/50 p-3 rounded-2xl border border-sky-100">
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Search className="w-4 h-4 text-sky-600 ml-2" />
+                    <input
+                      type="text"
+                      value={structureWinSearch}
+                      onChange={(e) => setStructureWinSearch(e.target.value)}
+                      placeholder="Szukaj folderu Windows (np. System32, Program Files)..."
+                      className="bg-white px-3 py-1.5 rounded-xl text-xs md:text-sm border border-sky-200 focus:outline-none focus:ring-2 focus:ring-sky-500 w-full sm:w-72"
+                    />
+                  </div>
+                  <div className="text-xs text-sky-800 font-semibold">
+                    Katalogi systemowe Microsoft Windows 11
+                  </div>
+                </div>
+
+                {/* Directory Explorer Split Grid */}
+                <div className="grid lg:grid-cols-12 gap-6">
+                  {/* Left List: Directories */}
+                  <div className="lg:col-span-5 space-y-2.5">
+                    {STRUCTURE_WIN_ITEMS
+                      .filter(item => {
+                        const q = structureWinSearch.toLowerCase().trim();
+                        if (!q) return true;
+                        return item.name.toLowerCase().includes(q) || item.path.toLowerCase().includes(q) || item.purpose.toLowerCase().includes(q);
+                      })
+                      .map(item => {
+                        const isSelected = selectedWinFolderId === item.id;
+                        return (
+                          <div
+                            key={item.id}
+                            onClick={() => setSelectedWinFolderId(item.id)}
+                            className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                              isSelected
+                                ? 'bg-sky-600 text-white border-sky-600 shadow-md scale-[1.01]'
+                                : 'bg-white hover:bg-sky-50/70 border-gray-200 text-[#2E3440]'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className={`p-2 rounded-xl text-sm ${isSelected ? 'bg-white/20 text-white' : 'bg-sky-100 text-sky-700'}`}>
+                                {item.id === 'system32' ? <ShieldAlert className="w-5 h-5" /> : item.id === 'c_drive' ? <HardDrive className="w-5 h-5" /> : <Folder className="w-5 h-5" />}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="font-bold text-xs md:text-sm font-mono truncate">{item.path}</div>
+                                <div className={`text-xs truncate ${isSelected ? 'text-sky-100' : 'text-gray-500'}`}>{item.name}</div>
+                              </div>
+                            </div>
+                            <ChevronRight className={`w-4 h-4 flex-shrink-0 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
+                          </div>
+                        );
+                      })}
+                  </div>
+
+                  {/* Right Detail Card */}
+                  <div className="lg:col-span-7">
+                    {(() => {
+                      const item = STRUCTURE_WIN_ITEMS.find(i => i.id === selectedWinFolderId) || STRUCTURE_WIN_ITEMS[0];
+                      return (
+                        <div className="bg-white rounded-3xl border-2 border-sky-100 p-6 md:p-8 space-y-6 shadow-sm sticky top-6">
+                          <div className="flex items-start justify-between gap-4 flex-wrap">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${item.importanceColor}`}>
+                                  {item.importance}
+                                </span>
+                                <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
+                                  {item.category}
+                                </span>
+                              </div>
+                              <h4 className="text-xl md:text-2xl font-bold font-mono text-[#0078D4] pt-1">
+                                {item.path}
+                              </h4>
+                              <p className="text-sm font-semibold text-gray-700">{item.name}</p>
+                            </div>
+                            <SpeechButton text={item.speechText} size="sm" />
+                          </div>
+
+                          {/* Purpose */}
+                          <div className="space-y-1.5">
+                            <h5 className="text-xs font-bold uppercase tracking-wider text-gray-400">Rola i Przeznaczenie</h5>
+                            <p className="text-sm md:text-base text-gray-800 leading-relaxed bg-sky-50/40 p-4 rounded-2xl border border-sky-100">
+                              {item.purpose}
+                            </p>
+                          </div>
+
+                          {/* Contents chips */}
+                          <div className="space-y-2">
+                            <h5 className="text-xs font-bold uppercase tracking-wider text-gray-400">Co znajduje się w środku?</h5>
+                            <div className="flex flex-wrap gap-2">
+                              {item.contents.map((sub, idx) => (
+                                <span key={idx} className="px-3 py-1 bg-gray-100 text-gray-800 rounded-xl text-xs font-mono font-medium border border-gray-200 flex items-center gap-1.5">
+                                  <span className="text-sky-600">📁</span>
+                                  {sub}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Equivalent in Linux */}
+                          <div className="bg-purple-50/60 border border-purple-100 p-4 rounded-2xl text-xs text-purple-950 space-y-1">
+                            <div className="font-bold flex items-center gap-1.5 text-purple-900">
+                              <Terminal className="w-4 h-4 text-purple-600" />
+                              Odpowiednik w systemie Linux:
+                            </div>
+                            <p className="text-gray-700 pl-5">{item.equivalentInOtherOS}</p>
+                          </div>
+
+                          {/* Pro Tip */}
+                          <div className="bg-amber-50/80 border border-amber-200 p-4 rounded-2xl text-xs text-amber-950 space-y-1">
+                            <div className="font-bold flex items-center gap-1.5 text-amber-900">
+                              <Sparkles className="w-4 h-4 text-amber-600" />
+                              Wskazówka / Ostrzeżenie Eksperta:
+                            </div>
+                            <p className="text-amber-900/90 pl-5 leading-relaxed">{item.proTip}</p>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Sub-tab 3: Linux Folders Browser */}
+            {structureSubTab === 'linux' && (
+              <div className="space-y-6 animate-fadeIn" id="structure-linux-content">
+                {/* Search and count bar */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-purple-50/50 p-3 rounded-2xl border border-purple-100">
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Search className="w-4 h-4 text-purple-600 ml-2" />
+                    <input
+                      type="text"
+                      value={structureLinSearch}
+                      onChange={(e) => setStructureLinSearch(e.target.value)}
+                      placeholder="Szukaj katalogu Linux FHS (np. /etc, /home, /bin, /var)..."
+                      className="bg-white px-3 py-1.5 rounded-xl text-xs md:text-sm border border-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-500 w-full sm:w-72"
+                    />
+                  </div>
+                  <div className="text-xs text-purple-800 font-semibold">
+                    Standard FHS (Filesystem Hierarchy Standard)
+                  </div>
+                </div>
+
+                {/* Directory Explorer Split Grid */}
+                <div className="grid lg:grid-cols-12 gap-6">
+                  {/* Left List: Directories */}
+                  <div className="lg:col-span-5 space-y-2.5 max-h-[600px] overflow-y-auto pr-1">
+                    {STRUCTURE_LIN_ITEMS
+                      .filter(item => {
+                        const q = structureLinSearch.toLowerCase().trim();
+                        if (!q) return true;
+                        return item.name.toLowerCase().includes(q) || item.path.toLowerCase().includes(q) || item.purpose.toLowerCase().includes(q);
+                      })
+                      .map(item => {
+                        const isSelected = selectedLinFolderId === item.id;
+                        return (
+                          <div
+                            key={item.id}
+                            onClick={() => setSelectedLinFolderId(item.id)}
+                            className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                              isSelected
+                                ? 'bg-purple-700 text-white border-purple-700 shadow-md scale-[1.01]'
+                                : 'bg-white hover:bg-purple-50/70 border-gray-200 text-[#2E3440]'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className={`p-2 rounded-xl text-sm ${isSelected ? 'bg-white/20 text-white' : 'bg-purple-100 text-purple-700'}`}>
+                                {item.id === 'root_dir' ? <FolderTree className="w-5 h-5" /> : item.id === 'root_user' ? <ShieldAlert className="w-5 h-5" /> : item.id === 'dev' ? <Cpu className="w-5 h-5" /> : <Folder className="w-5 h-5" />}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="font-bold text-xs md:text-sm font-mono truncate">{item.path}</div>
+                                <div className={`text-xs truncate ${isSelected ? 'text-purple-100' : 'text-gray-500'}`}>{item.name}</div>
+                              </div>
+                            </div>
+                            <ChevronRight className={`w-4 h-4 flex-shrink-0 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
+                          </div>
+                        );
+                      })}
+                  </div>
+
+                  {/* Right Detail Card */}
+                  <div className="lg:col-span-7">
+                    {(() => {
+                      const item = STRUCTURE_LIN_ITEMS.find(i => i.id === selectedLinFolderId) || STRUCTURE_LIN_ITEMS[0];
+                      return (
+                        <div className="bg-white rounded-3xl border-2 border-purple-100 p-6 md:p-8 space-y-6 shadow-sm sticky top-6">
+                          <div className="flex items-start justify-between gap-4 flex-wrap">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${item.importanceColor}`}>
+                                  {item.importance}
+                                </span>
+                                <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
+                                  {item.category}
+                                </span>
+                              </div>
+                              <h4 className="text-xl md:text-2xl font-bold font-mono text-[#E95420] pt-1">
+                                {item.path}
+                              </h4>
+                              <p className="text-sm font-semibold text-gray-700">{item.name}</p>
+                            </div>
+                            <SpeechButton text={item.speechText} size="sm" />
+                          </div>
+
+                          {/* Purpose */}
+                          <div className="space-y-1.5">
+                            <h5 className="text-xs font-bold uppercase tracking-wider text-gray-400">Rola i Przeznaczenie</h5>
+                            <p className="text-sm md:text-base text-gray-800 leading-relaxed bg-purple-50/40 p-4 rounded-2xl border border-purple-100">
+                              {item.purpose}
+                            </p>
+                          </div>
+
+                          {/* Contents chips */}
+                          <div className="space-y-2">
+                            <h5 className="text-xs font-bold uppercase tracking-wider text-gray-400">Co znajduje się w środku?</h5>
+                            <div className="flex flex-wrap gap-2">
+                              {item.contents.map((sub, idx) => (
+                                <span key={idx} className="px-3 py-1 bg-gray-100 text-gray-800 rounded-xl text-xs font-mono font-medium border border-gray-200 flex items-center gap-1.5">
+                                  <span className="text-purple-600">📂</span>
+                                  {sub}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Equivalent in Windows */}
+                          <div className="bg-sky-50/60 border border-sky-100 p-4 rounded-2xl text-xs text-sky-950 space-y-1">
+                            <div className="font-bold flex items-center gap-1.5 text-sky-900">
+                              <Monitor className="w-4 h-4 text-sky-600" />
+                              Odpowiednik w systemie Windows:
+                            </div>
+                            <p className="text-gray-700 pl-5">{item.equivalentInOtherOS}</p>
+                          </div>
+
+                          {/* Pro Tip */}
+                          <div className="bg-emerald-50/80 border border-emerald-200 p-4 rounded-2xl text-xs text-emerald-950 space-y-1">
+                            <div className="font-bold flex items-center gap-1.5 text-emerald-900">
+                              <Sparkles className="w-4 h-4 text-emerald-600" />
+                              Wskazówka Administratora Linux:
+                            </div>
+                            <p className="text-emerald-900/90 pl-5 leading-relaxed">{item.proTip}</p>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Sub-tab 4: Comparison Table */}
+            {structureSubTab === 'compare' && (
+              <div className="space-y-6 animate-fadeIn" id="structure-compare-content">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div>
+                    <h4 className="text-lg font-bold text-[#2E3440]">Tabela 10 Kluczowych Różnic w Architekturze Plików</h4>
+                    <p className="text-xs text-gray-500">Zestawienie najważniejszych cech systemów Windows 11 oraz Linux</p>
+                  </div>
+                  <SpeechButton 
+                    text="Tabela 10 kluczowych różnic w strukturze plików. Najważniejsze z nich to: Windows używa liter dysków i lewego ukośnika backslash, podczas gdy Linux używa jednego korzenia i prawego ukośnika slash. W Linuksie wielkość liter w nazwach plików ma ogromne znaczenie, a programy uruchamiają się dzięki uprawnieniom, a nie rozszerzeniu exe." 
+                    size="xs" 
+                  />
+                </div>
+
+                <div className="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm bg-white">
+                  <table className="w-full text-left border-collapse text-xs md:text-sm">
+                    <thead>
+                      <tr className="bg-[#2E3440] text-white">
+                        <th className="p-4 font-bold">Cecha / Kwestia</th>
+                        <th className="p-4 font-bold bg-[#0078D4]/90 text-white">🪟 Microsoft Windows</th>
+                        <th className="p-4 font-bold bg-[#E95420]/90 text-white">🐧 Linux (Ubuntu / Debian)</th>
+                        <th className="p-4 font-bold">Waga</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {STRUCTURE_COMPARISON_ITEMS.map((item, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50/80 transition-colors">
+                          <td className="p-4 font-bold text-gray-900 align-top">
+                            <div>{item.feature}</div>
+                            <div className="text-[11px] font-normal text-gray-500 mt-1">{item.description}</div>
+                          </td>
+                          <td className="p-4 text-sky-950 font-medium bg-sky-50/30 align-top font-mono">
+                            {item.windows}
+                          </td>
+                          <td className="p-4 text-purple-950 font-medium bg-purple-50/30 align-top font-mono">
+                            {item.linux}
+                          </td>
+                          <td className="p-4 align-top whitespace-nowrap">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${item.badgeColor}`}>
+                              {item.importance}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Sub-tab 5: Trainer Quiz Game */}
+            {structureSubTab === 'trainer' && (
+              <div className="space-y-6 animate-fadeIn" id="structure-trainer-content">
+                <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-6 rounded-3xl shadow-md flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div className="space-y-1 text-center md:text-left">
+                    <div className="flex items-center justify-center md:justify-start gap-2">
+                      <Gamepad2 className="w-6 h-6 text-yellow-300" />
+                      <h4 className="text-xl font-bold">Trener Rozpoznawania Ścieżek i Folderów</h4>
+                    </div>
+                    <p className="text-xs md:text-sm text-emerald-100">
+                      Sprawdź swój wzrok informatyka! Wskaż, do którego systemu należy podana ścieżka.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3 bg-white/20 px-4 py-2 rounded-2xl backdrop-blur-sm border border-white/20">
+                    <Award className="w-5 h-5 text-yellow-300" />
+                    <div className="text-xs">
+                      <span className="font-bold text-base">{trainerScore}</span> / {STRUCTURE_TRAINER_QUESTIONS.length} poprawnych (+{trainerScore * 5} XP)
+                    </div>
+                  </div>
+                </div>
+
+                {/* Question Cards Grid */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  {STRUCTURE_TRAINER_QUESTIONS.map(q => {
+                    const answered = trainerAnswers[q.id];
+                    const isCorrect = answered === q.correctOS;
+                    
+                    return (
+                      <div
+                        key={q.id}
+                        className={`p-5 rounded-2xl border-2 transition-all space-y-3 ${
+                          answered === undefined
+                            ? 'bg-white border-gray-200 shadow-sm'
+                            : isCorrect
+                            ? 'bg-emerald-50/60 border-emerald-300 shadow-sm'
+                            : 'bg-red-50/60 border-red-300 shadow-sm'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 border border-gray-200">
+                            Pytanie #{q.id}
+                          </span>
+                          <span className="text-[10px] text-gray-500 font-medium">{q.badgeLabel}</span>
+                        </div>
+
+                        {/* Path display box */}
+                        <div className="bg-gray-900 text-white font-mono text-xs md:text-sm p-3 rounded-xl overflow-x-auto font-bold select-all">
+                          {q.pathOrFolder}
+                        </div>
+
+                        {/* Buttons */}
+                        {answered === undefined ? (
+                          <div className="grid grid-cols-2 gap-2.5 pt-1">
+                            <button
+                              onClick={() => handleTrainerAnswer(q.id, 'windows')}
+                              className="py-2 px-3 bg-sky-50 hover:bg-[#0078D4] hover:text-white text-sky-800 border border-sky-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
+                            >
+                              <span>🪟 Windows</span>
+                            </button>
+                            <button
+                              onClick={() => handleTrainerAnswer(q.id, 'linux')}
+                              className="py-2 px-3 bg-purple-50 hover:bg-[#E95420] hover:text-white text-purple-800 border border-purple-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
+                            >
+                              <span>🐧 Linux</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="space-y-2 pt-1 animate-fadeIn">
+                            <div className="flex items-center gap-2 text-xs font-bold">
+                              {isCorrect ? (
+                                <span className="text-emerald-700 flex items-center gap-1">
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                  Brawo! Prawidłowa odpowiedź (+5 XP)
+                                </span>
+                              ) : (
+                                <span className="text-red-700 flex items-center gap-1">
+                                  <AlertCircle className="w-4 h-4 text-red-600" />
+                                  Błąd! Prawidłowa odpowiedź to: {q.correctOS === 'windows' ? 'Windows' : 'Linux'}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-600 bg-white/80 p-2.5 rounded-xl border border-gray-200 leading-relaxed">
+                              {q.explanation}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Reset button */}
+                <div className="flex justify-center pt-2">
+                  <button
+                    onClick={handleResetTrainer}
+                    className="py-2.5 px-6 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs md:text-sm font-bold transition flex items-center gap-2"
+                  >
+                    <span>Zresetuj pytania trenera</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 4: Terminal */}
         {activeTab === 'terminal' && (
           <div className="space-y-6 animate-fadeIn" id="content-terminal">
             <div className="space-y-4">

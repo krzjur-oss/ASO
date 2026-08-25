@@ -21,6 +21,8 @@ interface WindowsCMDProps {
   setCurrentPathId: (id: string) => void;
   onAddXP: (points: number) => void;
   onActionTriggered: (latestCommand?: string) => void;
+  onMinimize?: () => void;
+  onClose?: () => void;
 }
 
 interface CMDLine {
@@ -34,7 +36,9 @@ export default function WindowsCMD({
   currentPathId,
   setCurrentPathId,
   onAddXP,
-  onActionTriggered
+  onActionTriggered,
+  onMinimize,
+  onClose
 }: WindowsCMDProps) {
   const [input, setInput] = useState('');
   const [history, setHistory] = useState<CMDLine[]>([
@@ -361,15 +365,39 @@ export default function WindowsCMD({
       onClick={focusInput}
     >
       {/* CMD Window Header */}
-      <div className="bg-gray-800 text-gray-300 px-4 py-2 flex items-center justify-between border-b border-gray-700 select-none">
-        <div className="flex items-center gap-2">
+      <div className="bg-gray-800 text-gray-300 px-3 py-1.5 flex items-center justify-between border-b border-gray-700 select-none">
+        <div className="flex items-center gap-2 text-xs font-sans font-bold">
           <span className="text-blue-400">💻</span>
-          <span className="font-bold font-sans">Wiersz polecenia (CMD)</span>
+          <span>Administrator: Wiersz polecenia</span>
         </div>
-        <div className="flex gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-yellow-500 opacity-60"></span>
-          <span className="w-3 h-3 rounded-full bg-green-500 opacity-60"></span>
-          <span className="w-3 h-3 rounded-full bg-red-500 opacity-60"></span>
+        <div className="flex items-center gap-1">
+          {onMinimize && (
+            <button 
+              onClick={(e) => { e.stopPropagation(); onMinimize(); }}
+              className="w-6 h-6 rounded hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center transition-colors text-xs"
+              title="Minimalizuj do paska zadań"
+              id="cmd-btn-minimize"
+            >
+              —
+            </button>
+          )}
+          <button 
+            onClick={(e) => e.stopPropagation()}
+            className="w-6 h-6 rounded hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center transition-colors text-[10px]"
+            title="Maksymalizuj"
+          >
+            🗖
+          </button>
+          {onClose && (
+            <button 
+              onClick={(e) => { e.stopPropagation(); onClose(); }}
+              className="w-6 h-6 rounded hover:bg-red-600 text-gray-400 hover:text-white flex items-center justify-center transition-colors text-xs font-bold"
+              title="Zamknij"
+              id="cmd-btn-close"
+            >
+              ✕
+            </button>
+          )}
         </div>
       </div>
 

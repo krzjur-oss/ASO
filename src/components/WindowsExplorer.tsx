@@ -29,7 +29,25 @@ import {
   RotateCcw,
   Info,
   Copy,
-  RotateCw
+  RotateCw,
+  Volume2,
+  VolumeX,
+  Wifi,
+  Battery,
+  Calendar as CalendarIcon,
+  Bell,
+  ChevronUp,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ShieldCheck,
+  Layers,
+  Power,
+  Minus,
+  Square,
+  X,
+  Sliders,
+  Check
 } from 'lucide-react';
 import { VFSNode } from '../types';
 import { 
@@ -80,6 +98,14 @@ export default function WindowsExplorer({
   const [openApps, setOpenApps] = useState<string[]>(['explorer']);
   const [activeNotepadFileId, setActiveNotepadFileId] = useState<string | null>(null);
   const [startMenuOpen, setStartMenuOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [quickSettingsOpen, setQuickSettingsOpen] = useState(false);
+  const [hiddenIconsOpen, setHiddenIconsOpen] = useState(false);
+  const [volumeLevel, setVolumeLevel] = useState(80);
+  const [isMuted, setIsMuted] = useState(false);
+  const [wifiConnected, setWifiConnected] = useState(true);
+  const [startSearchQuery, setStartSearchQuery] = useState('');
+  const [calendarMonthOffset, setCalendarMonthOffset] = useState(0);
 
   // Dynamic ticking clock state
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -1049,11 +1075,50 @@ export default function WindowsExplorer({
         {/* 1. APP WINDOW: FILE EXPLORER */}
         {activeApp === 'explorer' && openApps.includes('explorer') && (
           <div 
-            className="absolute inset-x-2 top-2 bottom-2 bg-white rounded-2xl shadow-2xl border border-gray-100 flex flex-col z-10 animate-fadeIn"
+            className="absolute inset-x-2 top-2 bottom-2 bg-white rounded-2xl shadow-2xl border border-gray-200/80 flex flex-col z-10 animate-fadeIn overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Windows 11 Title Bar */}
+            <div className="bg-[#E5E9F0] border-b border-[#D8DEE9] px-3 py-1.5 flex items-center justify-between select-none">
+              <div className="flex items-center gap-2 text-xs font-semibold text-gray-700">
+                <Folder className="w-4 h-4 text-yellow-500 fill-yellow-400" />
+                <span className="font-bold">Eksplorator plików</span>
+                <span className="text-gray-400">—</span>
+                <span className="text-gray-600 font-normal truncate max-w-[200px]">
+                  {currentPathId === 'kosz' ? 'Kosz' : (vfs[currentPathId]?.name === 'root' ? 'Dysk lokalny (C:)' : vfs[currentPathId]?.name || 'Ten komputer')}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button 
+                  onClick={() => setActiveApp(null)}
+                  className="w-6 h-6 rounded hover:bg-gray-300/70 text-gray-600 flex items-center justify-center transition-colors text-xs"
+                  title="Minimalizuj do paska zadań"
+                  id="explorer-btn-minimize"
+                >
+                  —
+                </button>
+                <button 
+                  className="w-6 h-6 rounded hover:bg-gray-300/70 text-gray-600 flex items-center justify-center transition-colors text-[10px]"
+                  title="Maksymalizuj"
+                >
+                  🗖
+                </button>
+                <button 
+                  onClick={() => {
+                    setOpenApps(prev => prev.filter(a => a !== 'explorer'));
+                    setActiveApp(openApps.filter(a => a !== 'explorer')[0] as any || null);
+                  }}
+                  className="w-6 h-6 rounded hover:bg-red-500 hover:text-white text-gray-600 flex items-center justify-center transition-colors text-xs font-bold"
+                  title="Zamknij"
+                  id="explorer-btn-close"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
             {/* Explorer Inner Header */}
-            <div className="bg-[#ECEFF4] border-b border-[#D8DEE9] p-3 rounded-t-2xl flex flex-wrap items-center justify-between gap-3 select-none">
+            <div className="bg-[#ECEFF4] border-b border-[#D8DEE9] p-3 flex flex-wrap items-center justify-between gap-3 select-none">
               {/* Navigation & Address Bar */}
               <div className="flex items-center gap-2 flex-grow min-w-0">
                 <Tooltip content="W górę (Cofnij do folderu wyżej)">
@@ -1741,6 +1806,11 @@ export default function WindowsExplorer({
               setCurrentPathId={setCurrentPathId}
               onAddXP={onAddXP}
               onActionTriggered={onActionTriggered}
+              onMinimize={() => setActiveApp(null)}
+              onClose={() => {
+                setOpenApps(prev => prev.filter(a => a !== 'cmd'));
+                setActiveApp(openApps.filter(a => a !== 'cmd')[0] as any || null);
+              }}
             />
           </div>
         )}
@@ -1759,6 +1829,7 @@ export default function WindowsExplorer({
               setActiveFileId={setActiveNotepadFileId}
               onAddXP={onAddXP}
               onActionTriggered={onActionTriggered}
+              onMinimize={() => setActiveApp(null)}
               onClose={() => {
                 setOpenApps(prev => prev.filter(a => a !== 'notepad'));
                 setActiveApp(openApps.filter(a => a !== 'notepad')[0] as any || null);
@@ -1770,64 +1841,113 @@ export default function WindowsExplorer({
 
       {/* WINDOWS 11 STYLE BOTTOM TASKBAR */}
       <div 
-        className="bg-white/80 backdrop-blur-md border-t border-white/40 h-14 flex items-center justify-between px-4 z-20 select-none relative no-print shadow-lg"
+        className="bg-white/85 backdrop-blur-xl border-t border-gray-200/80 h-13 sm:h-14 flex items-center justify-between px-2 sm:px-4 z-20 select-none relative no-print shadow-xl"
         onClick={(e) => e.stopPropagation()}
         id="windows-taskbar"
       >
-        {/* Left branding widget & Open Windows list */}
-        <div className="flex items-center gap-3">
-          <div className="text-[10px] text-[#5e81ac] font-bold font-sans hidden sm:block">
-            <span>Akademia Windows 11</span>
+        {/* Left side: Windows branding + Active open window chips with close buttons */}
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="hidden lg:flex items-center gap-1.5 px-2 py-1 rounded-lg bg-blue-50/70 border border-blue-100 text-[#3b82f6] text-[11px] font-bold">
+            <span>🪟</span>
+            <span>Windows 11</span>
           </div>
+
+          {/* Interactive Open Windows List */}
           {openApps.length > 0 && (
-            <div className="hidden md:flex items-center gap-1.5 border-l border-gray-300 pl-3">
-              <span className="text-[9px] text-gray-400 uppercase tracking-wider font-extrabold mr-1">Otwarte okna:</span>
+            <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto py-1 max-w-[200px] sm:max-w-xs md:max-w-md scrollbar-none" id="taskbar-open-windows-list">
               {openApps.map(app => {
                 const isActive = activeApp === app;
-                const appName = app === 'explorer' ? 'Eksplorator plików' : app === 'cmd' ? 'Wiersz poleceń' : 'Notatnik';
+                const appName = app === 'explorer' 
+                  ? 'Eksplorator' 
+                  : app === 'cmd' 
+                  ? 'CMD' 
+                  : (activeNotepadFileId && vfs[activeNotepadFileId] ? vfs[activeNotepadFileId].name : 'Notatnik');
                 const appIcon = app === 'explorer' ? '📁' : app === 'cmd' ? '💻' : '📝';
+                
                 return (
-                  <button
+                  <div
                     key={app}
-                    onClick={() => {
-                      if (isActive) {
-                        setActiveApp(null); // minimize
-                      } else {
-                        if (!openApps.includes(app)) {
-                          setOpenApps(prev => [...prev, app]);
-                        }
-                        setActiveApp(app as any);
-                      }
-                    }}
-                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1.5 border cursor-pointer ${
+                    className={`group relative flex items-center rounded-lg text-[10px] sm:text-xs font-semibold transition-all border shrink-0 ${
                       isActive 
-                        ? 'bg-blue-50 text-blue-600 border-blue-200 shadow-2xs' 
-                        : 'bg-gray-100/50 text-gray-500 border-gray-200/50 hover:bg-gray-100'
+                        ? 'bg-blue-600 text-white border-blue-700 shadow-xs' 
+                        : 'bg-gray-100/90 text-gray-700 border-gray-200/80 hover:bg-gray-200'
                     }`}
                   >
-                    <span>{appIcon}</span>
-                    <span>{appName}</span>
-                    {isActive && <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-ping"></span>}
-                  </button>
+                    <button
+                      onClick={() => {
+                        if (isActive) {
+                          setActiveApp(null); // minimize to taskbar
+                        } else {
+                          setActiveApp(app as any);
+                        }
+                      }}
+                      className="flex items-center gap-1.5 px-2 py-1 cursor-pointer"
+                      title={`${appName} (${isActive ? 'Kliknij, aby zminimalizować' : 'Kliknij, aby przywrócić'})`}
+                    >
+                      <span>{appIcon}</span>
+                      <span className="truncate max-w-[70px] sm:max-w-[100px]">{appName}</span>
+                      {isActive && <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>}
+                    </button>
+                    
+                    {/* Instant Close button on the tab chip */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenApps(prev => prev.filter(a => a !== app));
+                        if (activeApp === app) {
+                          const remaining = openApps.filter(a => a !== app);
+                          setActiveApp(remaining.length > 0 ? (remaining[remaining.length - 1] as any) : null);
+                        }
+                      }}
+                      className={`p-1 mr-1 rounded hover:bg-red-500 hover:text-white transition-colors text-[9px] font-bold ${
+                        isActive ? 'text-blue-100' : 'text-gray-400'
+                      }`}
+                      title={`Zamknij okno: ${appName}`}
+                    >
+                      ✕
+                    </button>
+                  </div>
                 );
               })}
             </div>
           )}
         </div>
 
-        {/* Center centered icons */}
-        <div className="flex items-center gap-1.5 absolute left-1/2 -translate-x-1/2">
+        {/* Center centered dock icons */}
+        <div className="flex items-center gap-1 sm:gap-2 absolute left-1/2 -translate-x-1/2">
           
           {/* Start Menu Button */}
           <button
-            onClick={() => setStartMenuOpen(!startMenuOpen)}
-            className={`p-2 rounded-xl transition-all hover:bg-white/60 ${startMenuOpen ? 'bg-white shadow-xs scale-105' : ''}`}
-            title="Start Menu"
+            onClick={() => {
+              setStartMenuOpen(!startMenuOpen);
+              setCalendarOpen(false);
+              setQuickSettingsOpen(false);
+              setHiddenIconsOpen(false);
+            }}
+            className={`p-2 rounded-xl transition-all hover:bg-white/80 hover:scale-105 active:scale-95 ${
+              startMenuOpen ? 'bg-white shadow-md ring-2 ring-blue-400 scale-105' : ''
+            }`}
+            title="Start (Menu główne Windows)"
             id="taskbar-btn-start"
           >
-            <div className="w-5 h-5 bg-[#5e81ac] rounded-lg flex items-center justify-center text-white font-black text-[10px] shadow-sm">
+            <div className="w-6 h-6 bg-gradient-to-tr from-blue-600 to-cyan-500 rounded-lg flex items-center justify-center text-white font-black text-xs shadow-xs">
               🪟
             </div>
+          </button>
+
+          {/* Search Shortcut */}
+          <button
+            onClick={() => {
+              setStartMenuOpen(true);
+              setCalendarOpen(false);
+              setQuickSettingsOpen(false);
+              setHiddenIconsOpen(false);
+            }}
+            className="p-2 rounded-xl transition-all hover:bg-white/80 text-gray-700 hidden sm:flex items-center justify-center hover:scale-105"
+            title="Wyszukaj w systemie"
+            id="taskbar-btn-search"
+          >
+            <Search className="w-5 h-5 text-gray-600" />
           </button>
 
           {/* File Explorer Shortcut */}
@@ -1841,15 +1961,17 @@ export default function WindowsExplorer({
               }
               setStartMenuOpen(false);
             }}
-            className={`p-2 rounded-xl transition-all relative flex flex-col items-center justify-center hover:bg-white/60 ${
-              activeApp === 'explorer' ? 'bg-white shadow-xs' : ''
+            className={`p-2 rounded-xl transition-all relative flex flex-col items-center justify-center hover:bg-white/80 hover:scale-105 ${
+              activeApp === 'explorer' ? 'bg-white shadow-md' : ''
             }`}
-            title="Eksplorator plików"
+            title={`Eksplorator plików ${openApps.includes('explorer') ? (activeApp === 'explorer' ? '(Aktywny - kliknij, by zminimalizować)' : '(W tle - kliknij, by przywrócić)') : '(Uruchom)'}`}
             id="taskbar-btn-explorer"
           >
             <Folder className="w-5 h-5 text-yellow-500 fill-yellow-400" />
             {openApps.includes('explorer') && (
-              <span className="w-1 h-1 bg-blue-500 rounded-full absolute bottom-1"></span>
+              <span className={`w-3.5 h-1 rounded-full absolute -bottom-0.5 transition-all ${
+                activeApp === 'explorer' ? 'bg-blue-600' : 'bg-gray-400'
+              }`}></span>
             )}
           </button>
 
@@ -1864,17 +1986,19 @@ export default function WindowsExplorer({
               }
               setStartMenuOpen(false);
             }}
-            className={`p-2 rounded-xl transition-all relative flex flex-col items-center justify-center hover:bg-white/60 ${
-              activeApp === 'cmd' ? 'bg-white shadow-xs' : ''
+            className={`p-2 rounded-xl transition-all relative flex flex-col items-center justify-center hover:bg-white/80 hover:scale-105 ${
+              activeApp === 'cmd' ? 'bg-white shadow-md' : ''
             }`}
-            title="Wiersz poleceń (CMD)"
+            title={`Wiersz poleceń CMD ${openApps.includes('cmd') ? (activeApp === 'cmd' ? '(Aktywny)' : '(W tle)') : '(Uruchom)'}`}
             id="taskbar-btn-cmd"
           >
             <div className="w-5 h-5 bg-black rounded-lg flex items-center justify-center text-white text-[9px] font-mono font-bold border border-gray-600">
               &gt;_
             </div>
             {openApps.includes('cmd') && (
-              <span className="w-1 h-1 bg-blue-500 rounded-full absolute bottom-1"></span>
+              <span className={`w-3.5 h-1 rounded-full absolute -bottom-0.5 transition-all ${
+                activeApp === 'cmd' ? 'bg-blue-600' : 'bg-gray-400'
+              }`}></span>
             )}
           </button>
 
@@ -1889,102 +2013,267 @@ export default function WindowsExplorer({
               }
               setStartMenuOpen(false);
             }}
-            className={`p-2 rounded-xl transition-all relative flex flex-col items-center justify-center hover:bg-white/60 ${
-              activeApp === 'notepad' ? 'bg-white shadow-xs' : ''
+            className={`p-2 rounded-xl transition-all relative flex flex-col items-center justify-center hover:bg-white/80 hover:scale-105 ${
+              activeApp === 'notepad' ? 'bg-white shadow-md' : ''
             }`}
-            title="Notatnik"
+            title={`Notatnik ${openApps.includes('notepad') ? (activeApp === 'notepad' ? '(Aktywny)' : '(W tle)') : '(Uruchom)'}`}
             id="taskbar-btn-notepad"
           >
             <FileText className="w-5 h-5 text-blue-500" />
             {openApps.includes('notepad') && (
-              <span className="w-1 h-1 bg-blue-500 rounded-full absolute bottom-1"></span>
+              <span className={`w-3.5 h-1 rounded-full absolute -bottom-0.5 transition-all ${
+                activeApp === 'notepad' ? 'bg-blue-600' : 'bg-gray-400'
+              }`}></span>
             )}
           </button>
 
         </div>
 
-        {/* Right side widgets: volume, wifi, clock */}
-        <div className="text-right flex items-center gap-3 text-gray-600 font-sans text-[10px] font-bold select-none">
+        {/* Right side System Tray: challenge timer, hidden icons, quick settings, clock, show desktop */}
+        <div className="flex items-center gap-1 sm:gap-2 text-gray-700 font-sans text-xs font-semibold select-none">
+          {/* Challenge Timer if active */}
           {isChallengeActive && challengeTimeLeft !== undefined && (
-            <div className="bg-red-50 text-red-600 px-2 py-1 rounded-md flex items-center gap-1 border border-red-200 animate-pulse font-mono text-[10px]" id="windows-taskbar-challenge-timer">
-              <span>⏱️ Zostało:</span>
-              <span className="font-extrabold text-xs">{challengeTimeLeft}s</span>
+            <div className="bg-red-50 text-red-600 px-2 py-1 rounded-lg flex items-center gap-1 border border-red-200 animate-pulse font-mono text-[10px] sm:text-xs" id="windows-taskbar-challenge-timer">
+              <span>⏱️</span>
+              <span className="font-extrabold">{challengeTimeLeft}s</span>
             </div>
           )}
-          <div className="hidden xs:flex items-center gap-2">
-            <span>📶</span>
-            <span>🔊</span>
+
+          {/* Hidden icons chevron toggle button */}
+          <button
+            onClick={() => {
+              setHiddenIconsOpen(!hiddenIconsOpen);
+              setCalendarOpen(false);
+              setQuickSettingsOpen(false);
+              setStartMenuOpen(false);
+            }}
+            className={`p-1.5 rounded-lg hover:bg-gray-200/70 transition-all text-gray-600 hidden xs:flex items-center justify-center ${
+              hiddenIconsOpen ? 'bg-gray-200' : ''
+            }`}
+            title="Pokaż ukryte ikony zasobnika"
+            id="taskbar-btn-hidden-icons"
+          >
+            <ChevronUp className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Language selector chip */}
+          <div 
+            className="hidden md:flex px-1.5 py-1 rounded-md text-[10px] font-bold text-gray-500 hover:bg-gray-200/70 cursor-default"
+            title="Klawiatura: Polski (programisty)"
+          >
+            POL
           </div>
-          <div className="flex flex-col items-end leading-none">
-            <span>{currentTime.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-            <span className="text-[8px] text-gray-400 mt-0.5">{currentTime.toLocaleDateString('pl-PL')}</span>
-          </div>
+
+          {/* Quick Settings Group (Wi-Fi, Volume, Battery) */}
+          <button
+            onClick={() => {
+              setQuickSettingsOpen(!quickSettingsOpen);
+              setCalendarOpen(false);
+              setHiddenIconsOpen(false);
+              setStartMenuOpen(false);
+            }}
+            className={`flex items-center gap-1.5 px-2 py-1 rounded-xl transition-all hover:bg-gray-200/70 cursor-pointer ${
+              quickSettingsOpen ? 'bg-gray-200 shadow-xs' : ''
+            }`}
+            title="Centrum szybkich ustawień (Dźwięk, Sieć, Bateria)"
+            id="taskbar-btn-quick-settings"
+          >
+            <Wifi className={`w-3.5 h-3.5 ${wifiConnected ? 'text-gray-700' : 'text-gray-400'}`} />
+            {isMuted || volumeLevel === 0 ? (
+              <VolumeX className="w-3.5 h-3.5 text-red-500" />
+            ) : (
+              <Volume2 className="w-3.5 h-3.5 text-gray-700" />
+            )}
+            <Battery className="w-3.5 h-3.5 text-emerald-600 hidden sm:inline" />
+          </button>
+
+          {/* Clock & Polish Date Flyout Toggle Button */}
+          <button
+            onClick={() => {
+              setCalendarOpen(!calendarOpen);
+              setQuickSettingsOpen(false);
+              setHiddenIconsOpen(false);
+              setStartMenuOpen(false);
+            }}
+            className={`flex flex-col items-end px-2 py-1 rounded-xl transition-all hover:bg-gray-200/70 cursor-pointer leading-tight ${
+              calendarOpen ? 'bg-gray-200 shadow-xs' : ''
+            }`}
+            title="Kalendarz i Centrum powiadomień"
+            id="taskbar-btn-clock"
+          >
+            <span className="text-[11px] sm:text-xs font-bold text-gray-800">
+              {currentTime.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </span>
+            <span className="text-[9px] text-gray-500">
+              {currentTime.toLocaleDateString('pl-PL')}
+            </span>
+          </button>
+
+          {/* Show Desktop Button (Classic Windows thin vertical strip on far right) */}
+          <Tooltip content="Pokaż pulpit (minimalizuje wszystkie okna)">
+            <button
+              onClick={() => {
+                if (activeApp !== null) {
+                  setActiveApp(null);
+                } else if (openApps.length > 0) {
+                  setActiveApp(openApps[0] as any);
+                }
+              }}
+              className="w-2.5 h-8 ml-0.5 border-l border-gray-300 hover:bg-blue-400/40 rounded-r transition-all"
+              title="Pokaż pulpit"
+              id="taskbar-btn-show-desktop"
+            />
+          </Tooltip>
         </div>
 
-        {/* POPUP: WINDOWS 11 START MENU */}
+        {/* ========================================================================= */}
+        {/* POPUP 1: WINDOWS 11 START MENU */}
+        {/* ========================================================================= */}
         {startMenuOpen && (
           <div 
-            className="absolute bottom-16 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-md rounded-2xl w-80 p-5 shadow-2xl border border-white/60 animate-scaleUp text-gray-800 select-none z-30"
+            className="absolute bottom-16 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-2xl rounded-2xl w-84 sm:w-96 p-5 shadow-2xl border border-gray-200 animate-scaleUp text-gray-800 select-none z-30"
             id="start-menu-popup"
           >
-            <div className="bg-gray-100/85 px-3 py-1.5 rounded-xl text-xs text-gray-400 mb-4 flex items-center gap-2 border border-gray-200/25">
-              <span>🔍</span>
-              <span>Wyszukaj pliki i programy...</span>
+            {/* Start Search input */}
+            <div className="bg-gray-100/90 px-3 py-2 rounded-xl text-xs text-gray-700 mb-4 flex items-center gap-2 border border-gray-200 focus-within:ring-2 focus-within:ring-blue-500 focus-within:bg-white">
+              <Search className="w-4 h-4 text-gray-400 shrink-0" />
+              <input 
+                type="text"
+                placeholder="Wyszukaj pliki, foldery i aplikacje..."
+                value={startSearchQuery}
+                onChange={(e) => setStartSearchQuery(e.target.value)}
+                className="w-full bg-transparent focus:outline-none text-xs text-gray-800 placeholder-gray-400"
+                autoFocus
+              />
+              {startSearchQuery && (
+                <button onClick={() => setStartSearchQuery('')} className="text-gray-400 hover:text-gray-600 text-xs">✕</button>
+              )}
             </div>
 
-            <h4 className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-2">Polecane programy</h4>
-            <div className="grid grid-cols-3 gap-2 mb-4">
-              <button 
-                onClick={() => {
-                  if (!openApps.includes('explorer')) setOpenApps(prev => [...prev, 'explorer']);
-                  setActiveApp('explorer');
-                  setStartMenuOpen(false);
-                }}
-                className="flex flex-col items-center p-2 hover:bg-gray-100 rounded-xl transition-all"
-              >
-                <Folder className="w-7 h-7 text-yellow-500 fill-yellow-400" />
-                <span className="text-[9px] font-bold text-gray-700 mt-1 truncate max-w-full">Eksplorator</span>
-              </button>
-              
-              <button 
-                onClick={() => {
-                  if (!openApps.includes('cmd')) setOpenApps(prev => [...prev, 'cmd']);
-                  setActiveApp('cmd');
-                  setStartMenuOpen(false);
-                }}
-                className="flex flex-col items-center p-2 hover:bg-gray-100 rounded-xl transition-all"
-              >
-                <div className="w-7 h-7 bg-black rounded-lg flex items-center justify-center text-white text-[9px] font-mono font-bold border border-gray-600">
-                  &gt;_
+            {/* Filtered Search Results (if user types in start search) */}
+            {startSearchQuery.trim() ? (
+              <div className="mb-4 max-h-48 overflow-y-auto pr-1">
+                <h4 className="text-[10px] uppercase font-extrabold text-gray-400 tracking-wider mb-2">Wyniki wyszukiwania</h4>
+                {Object.values(safeVfs).filter(n => n.name.toLowerCase().includes(startSearchQuery.toLowerCase())).length === 0 ? (
+                  <p className="text-xs text-gray-400 py-3 text-center">Brak wyników dla "{startSearchQuery}"</p>
+                ) : (
+                  <div className="space-y-1">
+                    {Object.values(safeVfs)
+                      .filter(n => n.name.toLowerCase().includes(startSearchQuery.toLowerCase()))
+                      .slice(0, 5)
+                      .map(node => (
+                        <button
+                          key={node.id}
+                          onClick={() => {
+                            if (node.type === 'directory') {
+                              setCurrentPathId(node.id);
+                              if (!openApps.includes('explorer')) setOpenApps(prev => [...prev, 'explorer']);
+                              setActiveApp('explorer');
+                            } else {
+                              setActiveNotepadFileId(node.id);
+                              if (!openApps.includes('notepad')) setOpenApps(prev => [...prev, 'notepad']);
+                              setActiveApp('notepad');
+                            }
+                            setStartMenuOpen(false);
+                            setStartSearchQuery('');
+                          }}
+                          className="w-full flex items-center justify-between p-2 hover:bg-blue-50 rounded-xl text-left transition-colors text-xs cursor-pointer group"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span>{node.type === 'directory' ? '📁' : '📄'}</span>
+                            <span className="font-semibold text-gray-800 group-hover:text-blue-600">{node.name}</span>
+                          </div>
+                          <span className="text-[10px] text-gray-400">{node.type === 'directory' ? 'Folder' : `${node.size || 0} B`}</span>
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                {/* Pinned Applications */}
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-[10px] uppercase font-extrabold text-gray-400 tracking-wider">Przypięte aplikacje</h4>
+                  <span className="text-[10px] text-blue-600 font-semibold cursor-pointer">Wszystkie aplikacje &gt;</span>
                 </div>
-                <span className="text-[9px] font-bold text-gray-700 mt-1 truncate max-w-full">Konsola CMD</span>
-              </button>
+                
+                <div className="grid grid-cols-4 gap-2 mb-4">
+                  <button 
+                    onClick={() => {
+                      if (!openApps.includes('explorer')) setOpenApps(prev => [...prev, 'explorer']);
+                      setActiveApp('explorer');
+                      setStartMenuOpen(false);
+                    }}
+                    className="flex flex-col items-center p-2 hover:bg-gray-100 rounded-xl transition-all cursor-pointer group"
+                  >
+                    <Folder className="w-8 h-8 text-yellow-500 fill-yellow-400 group-hover:scale-110 transition-transform" />
+                    <span className="text-[10px] font-bold text-gray-700 mt-1 truncate max-w-full">Eksplorator</span>
+                  </button>
+                  
+                  <button 
+                    onClick={() => {
+                      if (!openApps.includes('cmd')) setOpenApps(prev => [...prev, 'cmd']);
+                      setActiveApp('cmd');
+                      setStartMenuOpen(false);
+                    }}
+                    className="flex flex-col items-center p-2 hover:bg-gray-100 rounded-xl transition-all cursor-pointer group"
+                  >
+                    <div className="w-8 h-8 bg-black rounded-xl flex items-center justify-center text-white text-[10px] font-mono font-bold border border-gray-600 group-hover:scale-110 transition-transform">
+                      &gt;_
+                    </div>
+                    <span className="text-[10px] font-bold text-gray-700 mt-1 truncate max-w-full">Konsola CMD</span>
+                  </button>
 
-              <button 
-                onClick={() => {
-                  setActiveNotepadFileId(null);
-                  if (!openApps.includes('notepad')) setOpenApps(prev => [...prev, 'notepad']);
-                  setActiveApp('notepad');
-                  setStartMenuOpen(false);
-                }}
-                className="flex flex-col items-center p-2 hover:bg-gray-100 rounded-xl transition-all"
-              >
-                <FileText className="w-7 h-7 text-blue-500" />
-                <span className="text-[9px] font-bold text-gray-700 mt-1 truncate max-w-full">Notatnik</span>
-              </button>
-            </div>
+                  <button 
+                    onClick={() => {
+                      setActiveNotepadFileId(null);
+                      if (!openApps.includes('notepad')) setOpenApps(prev => [...prev, 'notepad']);
+                      setActiveApp('notepad');
+                      setStartMenuOpen(false);
+                    }}
+                    className="flex flex-col items-center p-2 hover:bg-gray-100 rounded-xl transition-all cursor-pointer group"
+                  >
+                    <FileText className="w-8 h-8 text-blue-500 group-hover:scale-110 transition-transform" />
+                    <span className="text-[10px] font-bold text-gray-700 mt-1 truncate max-w-full">Notatnik</span>
+                  </button>
 
-            <div className="bg-[#5E81AC]/10 border border-[#5E81AC]/20 p-3 rounded-xl mb-4 text-xs">
-              <p className="font-bold text-[#5E81AC] text-[11px] mb-1">💡 Podpowiedź Plikusia:</p>
-              <p className="text-[10px] text-[#4C566A] leading-normal italic">
-                "Notatnik to aplikacja do edycji plików tekstowych z rozszerzeniem .txt. Możesz pisać tam swoje notatki ze szkoły!"
-              </p>
-            </div>
+                  <button 
+                    onClick={() => {
+                      setCurrentPathId('kosz');
+                      if (!openApps.includes('explorer')) setOpenApps(prev => [...prev, 'explorer']);
+                      setActiveApp('explorer');
+                      setStartMenuOpen(false);
+                    }}
+                    className="flex flex-col items-center p-2 hover:bg-gray-100 rounded-xl transition-all cursor-pointer group"
+                  >
+                    <Trash2 className="w-8 h-8 text-gray-500 group-hover:scale-110 transition-transform" />
+                    <span className="text-[10px] font-bold text-gray-700 mt-1 truncate max-w-full">Kosz</span>
+                  </button>
+                </div>
 
-            <div className="flex items-center justify-between border-t border-gray-100 pt-3 text-[11px] text-gray-500">
-              <div className="flex items-center gap-1.5 font-bold text-gray-700">
-                <span className="bg-[#5e81ac] text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">U</span>
-                <span>Uczen_SP</span>
+                {/* Educational Tip */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 p-3 rounded-xl mb-4 text-xs">
+                  <p className="font-bold text-blue-700 text-[11px] mb-0.5 flex items-center gap-1.5">
+                    <span>💡</span>
+                    <span>Wskazówka Windows:</span>
+                  </p>
+                  <p className="text-[10px] text-gray-600 leading-relaxed">
+                    Każde otwarte okno możesz zminimalizować do dolnego paska zadań klikając znak <b>—</b> w prawym górnym rogu okna lub klikając jego ikonę na pasku zadań!
+                  </p>
+                </div>
+              </>
+            )}
+
+            {/* Footer: User profile & Power button */}
+            <div className="flex items-center justify-between border-t border-gray-200/80 pt-3 text-[11px] text-gray-600">
+              <div className="flex items-center gap-2 font-bold text-gray-800">
+                <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                  U
+                </div>
+                <div>
+                  <div className="text-xs leading-none">Uczen_SP</div>
+                  <div className="text-[9px] text-gray-400 font-normal">Administrator lokalny</div>
+                </div>
               </div>
               <button 
                 onClick={() => {
@@ -1992,10 +2281,217 @@ export default function WindowsExplorer({
                   setActiveApp('explorer');
                   setStartMenuOpen(false);
                 }}
-                className="hover:bg-red-50 hover:text-red-600 px-2.5 py-1 rounded-lg transition-all border border-transparent hover:border-red-100 font-bold"
+                className="flex items-center gap-1 hover:bg-red-50 hover:text-red-600 px-3 py-1.5 rounded-xl transition-all border border-gray-200 hover:border-red-200 font-semibold cursor-pointer text-xs"
+                title="Zresetuj otwarte okna do stanu początkowego"
               >
-                Uruchom ponownie 🔄
+                <Power className="w-3.5 h-3.5" />
+                <span>Uruchom ponownie</span>
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* POPUP 2: WINDOWS 11 CALENDAR & NOTIFICATIONS FLYOUT */}
+        {/* ========================================================================= */}
+        {calendarOpen && (
+          <div 
+            className="absolute bottom-16 right-2 sm:right-4 bg-white/95 backdrop-blur-2xl rounded-2xl w-80 sm:w-88 p-4 shadow-2xl border border-gray-200 animate-scaleUp text-gray-800 select-none z-30"
+            id="calendar-popup"
+          >
+            {/* Header: Full formatted polish date */}
+            <div className="border-b border-gray-100 pb-3 mb-3">
+              <div className="text-2xl font-bold text-gray-900 leading-none">
+                {currentTime.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}
+              </div>
+              <div className="text-xs text-blue-600 font-semibold capitalize mt-1">
+                {currentTime.toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              </div>
+            </div>
+
+            {/* Polish Monthly Calendar */}
+            {(() => {
+              const targetDate = new Date(currentTime.getFullYear(), currentTime.getMonth() + calendarMonthOffset, 1);
+              const monthTitle = targetDate.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' });
+              const firstDayIndex = (targetDate.getDay() + 6) % 7; // Mon = 0
+              const daysInCurrentMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0).getDate();
+              const isCurrentMonthView = calendarMonthOffset === 0;
+              const todayNumber = currentTime.getDate();
+
+              return (
+                <div className="mb-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-gray-800 capitalize">{monthTitle}</span>
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={() => setCalendarMonthOffset(prev => prev - 1)}
+                        className="p-1 rounded-lg hover:bg-gray-100 text-gray-600"
+                        title="Poprzedni miesiąc"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                      </button>
+                      <button 
+                        onClick={() => setCalendarMonthOffset(0)}
+                        className="text-[10px] px-1.5 py-0.5 rounded-md hover:bg-gray-100 text-blue-600 font-semibold"
+                        title="Dzisiaj"
+                      >
+                        Dziś
+                      </button>
+                      <button 
+                        onClick={() => setCalendarMonthOffset(prev => prev + 1)}
+                        className="p-1 rounded-lg hover:bg-gray-100 text-gray-600"
+                        title="Następny miesiąc"
+                      >
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Weekday headers */}
+                  <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-gray-400 mb-1">
+                    <span>Pn</span><span>Wt</span><span>Śr</span><span>Cz</span><span>Pt</span><span>So</span><span>Nd</span>
+                  </div>
+
+                  {/* Day grid */}
+                  <div className="grid grid-cols-7 gap-1 text-center text-xs">
+                    {Array.from({ length: firstDayIndex }).map((_, i) => (
+                      <div key={`empty-${i}`} className="h-6"></div>
+                    ))}
+                    {Array.from({ length: daysInCurrentMonth }).map((_, i) => {
+                      const dayNum = i + 1;
+                      const isToday = isCurrentMonthView && dayNum === todayNumber;
+                      return (
+                        <div 
+                          key={dayNum}
+                          className={`h-6 flex items-center justify-center rounded-lg text-xs font-medium transition-colors ${
+                            isToday 
+                              ? 'bg-blue-600 text-white font-bold shadow-xs' 
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          {dayNum}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Notification items */}
+            <div className="border-t border-gray-100 pt-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Powiadomienia systemu</span>
+                <span className="text-[10px] text-gray-400">Wszystkie przeczytane</span>
+              </div>
+              <div className="bg-gray-50 border border-gray-200/70 p-2.5 rounded-xl text-xs flex items-start gap-2">
+                <span className="text-base">🚀</span>
+                <div>
+                  <div className="font-bold text-gray-800 text-[11px]">Wirtualny System Plików jest gotowy</div>
+                  <div className="text-[10px] text-gray-500 mt-0.5">Możesz swobodnie tworzyć foldery, edytować pliki i uczyć się komend wiersza poleceń.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* POPUP 3: WINDOWS 11 QUICK SETTINGS FLYOUT */}
+        {/* ========================================================================= */}
+        {quickSettingsOpen && (
+          <div 
+            className="absolute bottom-16 right-4 sm:right-20 bg-white/95 backdrop-blur-2xl rounded-2xl w-80 p-4 shadow-2xl border border-gray-200 animate-scaleUp text-gray-800 select-none z-30"
+            id="quick-settings-popup"
+          >
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              {/* Wi-Fi Toggle */}
+              <button
+                onClick={() => setWifiConnected(!wifiConnected)}
+                className={`p-3 rounded-xl flex flex-col items-center justify-center transition-all cursor-pointer border ${
+                  wifiConnected 
+                    ? 'bg-blue-600 text-white border-blue-700 shadow-xs' 
+                    : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
+                }`}
+              >
+                <Wifi className="w-5 h-5 mb-1" />
+                <span className="text-[10px] font-bold">Wi-Fi</span>
+                <span className="text-[8px] opacity-80">{wifiConnected ? 'Szkolna_5G' : 'Wyłączone'}</span>
+              </button>
+
+              {/* Bluetooth */}
+              <div className="p-3 rounded-xl flex flex-col items-center justify-center bg-blue-600 text-white border border-blue-700 shadow-xs">
+                <span className="text-base mb-1">ᛒ</span>
+                <span className="text-[10px] font-bold">Bluetooth</span>
+                <span className="text-[8px] opacity-80">Włączone</span>
+              </div>
+
+              {/* Battery Saver */}
+              <div className="p-3 rounded-xl flex flex-col items-center justify-center bg-gray-100 text-gray-600 border border-gray-200">
+                <Battery className="w-5 h-5 mb-1 text-emerald-600" />
+                <span className="text-[10px] font-bold">Bateria</span>
+                <span className="text-[8px] text-gray-500">100% (Sieć)</span>
+              </div>
+            </div>
+
+            {/* Interactive Volume Slider */}
+            <div className="space-y-3 bg-gray-50 p-3 rounded-xl border border-gray-200/70 mb-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-gray-700 flex items-center gap-1.5">
+                  {isMuted || volumeLevel === 0 ? <VolumeX className="w-4 h-4 text-red-500" /> : <Volume2 className="w-4 h-4 text-blue-600" />}
+                  <span>Głośność</span>
+                </span>
+                <span className="font-mono text-xs font-bold text-gray-600">{isMuted ? 'Wyciszono' : `${volumeLevel}%`}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsMuted(!isMuted)}
+                  className={`p-1.5 rounded-lg border text-xs font-bold ${
+                    isMuted ? 'bg-red-100 text-red-700 border-red-200' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'
+                  }`}
+                  title="Wycisz / włącz dźwięk"
+                >
+                  {isMuted ? '🔇' : '🔊'}
+                </button>
+                <input 
+                  type="range" 
+                  min="0" 
+                  max="100" 
+                  value={isMuted ? 0 : volumeLevel}
+                  onChange={(e) => {
+                    setVolumeLevel(Number(e.target.value));
+                    if (isMuted) setIsMuted(false);
+                  }}
+                  className="w-full accent-blue-600 cursor-pointer"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] text-gray-500 px-1">
+              <span>🔋 Zasilacz podłączony</span>
+              <span className="text-emerald-600 font-bold">✓ 100%</span>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* POPUP 4: WINDOWS 11 HIDDEN ICONS TRAY */}
+        {/* ========================================================================= */}
+        {hiddenIconsOpen && (
+          <div 
+            className="absolute bottom-16 right-20 sm:right-32 bg-white/95 backdrop-blur-2xl rounded-2xl p-3 shadow-2xl border border-gray-200 animate-scaleUp text-gray-800 select-none z-30 flex items-center gap-3"
+            id="hidden-icons-popup"
+          >
+            <div className="flex flex-col items-center p-1.5 hover:bg-gray-100 rounded-xl cursor-default" title="Zabezpieczenia Windows: Brak zagrożeń">
+              <ShieldCheck className="w-5 h-5 text-emerald-600" />
+              <span className="text-[8px] font-bold text-gray-600 mt-0.5">Defender</span>
+            </div>
+            <div className="flex flex-col items-center p-1.5 hover:bg-gray-100 rounded-xl cursor-default" title="Bezpieczne usuwanie sprzętu (Dysk C:)">
+              <HardDrive className="w-5 h-5 text-blue-600" />
+              <span className="text-[8px] font-bold text-gray-600 mt-0.5">Dysk C:</span>
+            </div>
+            <div className="flex flex-col items-center p-1.5 hover:bg-gray-100 rounded-xl cursor-default" title="Kopia zapasowa w chmurze: Zsynchronizowano">
+              <span className="text-base">☁️</span>
+              <span className="text-[8px] font-bold text-gray-600 mt-0.5">Chmura</span>
             </div>
           </div>
         )}
