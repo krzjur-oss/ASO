@@ -5,15 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Akademia Systemów Operacyjnych - Interaktywny Symulator</title>
     
+    <!-- Early ServiceWorker unregister & cache buster to prevent stale cache lockups -->
+    <script>
+      (function() {
+        try {
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(regs) {
+              for (var i = 0; i < regs.length; i++) {
+                regs[i].unregister();
+              }
+            });
+          }
+          if ('caches' in window) {
+            caches.keys().then(function(keys) {
+              for (var i = 0; i < keys.length; i++) {
+                caches.delete(keys[i]);
+              }
+            });
+          }
+        } catch (e) {
+          // ignore
+        }
+      })();
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
     
     <!-- PWA Meta & Manifest -->
-    <link rel="manifest" href="manifest.json" />
-    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
-    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png" />
-    <link rel="apple-touch-icon" href="icon-512.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+    <link rel="apple-touch-icon" href="/icon-512.png" />
     <meta name="theme-color" content="#5E81AC" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -22,26 +46,7 @@
     <meta name="application-name" content="Akademia SO" />
   </head>
   <body class="bg-[#E5E9F0] text-[#2E3440] antialiased">
-    <div id="root">
-      <!-- Pre-React Loading State to prevent blank white screen on mobile/tablet connections -->
-      <div id="app-preloader" style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #2E3440; color: #ECEFF4; font-family: 'Inter', system-ui, -apple-system, sans-serif; padding: 20px; text-align: center;">
-        <div style="width: 56px; height: 56px; border-radius: 16px; background-color: #5E81AC; display: flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
-          💻
-        </div>
-        <h2 style="font-size: 20px; font-weight: 700; margin: 0 0 8px 0; color: #ECEFF4;">Akademia Systemów Operacyjnych</h2>
-        <p style="font-size: 13px; color: #D8DEE9; margin: 0 0 20px 0; max-width: 320px;">Trwa uruchamianie symulatora Windows & Linux...</p>
-        <div style="width: 140px; height: 4px; background-color: #4C566A; border-radius: 9999px; overflow: hidden; position: relative;">
-          <div style="position: absolute; height: 100%; width: 50%; background-color: #88C0D0; border-radius: 9999px; animation: preload-pulse 1.2s infinite ease-in-out;"></div>
-        </div>
-        <style>
-          @keyframes preload-pulse {
-            0% { left: -50%; width: 30%; }
-            50% { left: 35%; width: 60%; }
-            100% { left: 100%; width: 30%; }
-          }
-        </style>
-      </div>
-    </div>
+    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
