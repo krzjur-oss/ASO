@@ -32,12 +32,19 @@ import { MISSIONS } from './utils/missions';
 import { playClickSound, playSuccessSound, speakText, stopSpeaking } from './utils/audio';
 import { safeStorage } from './utils/storage';
 
-// Component Imports
-import TheorySection from './components/TheorySection';
-import WindowsExplorer from './components/WindowsExplorer';
-import LinuxTerminal from './components/LinuxTerminal';
-import MissionsSection from './components/MissionsSection';
+// Lazy Loaded Component Modules for optimal initial bundle performance
+const TheorySection = React.lazy(() => import('./components/TheorySection'));
+const WindowsExplorer = React.lazy(() => import('./components/WindowsExplorer'));
+const LinuxTerminal = React.lazy(() => import('./components/LinuxTerminal'));
+const MissionsSection = React.lazy(() => import('./components/MissionsSection'));
 import SpeechButton from './components/SpeechButton';
+
+const SectionLoadingFallback = () => (
+  <div className="flex flex-col items-center justify-center p-12 space-y-3 min-h-[350px] bg-white/40 backdrop-blur-sm rounded-3xl border border-white/60">
+    <div className="w-9 h-9 border-3 border-[#5E81AC] border-t-transparent rounded-full animate-spin"></div>
+    <span className="text-xs font-semibold text-[#4C566A]">Ładowanie symulatora...</span>
+  </div>
+);
 
 export default function App() {
   
@@ -639,8 +646,8 @@ export default function App() {
 
         {/* ACTIVE MODULE CONTAINER */}
         <div className="min-h-[500px]" id="active-tab-container">
-          
-          {/* 1. Theory & Quiz */}
+          <React.Suspense fallback={<SectionLoadingFallback />}>
+            {/* 1. Theory & Quiz */}
           {activeTab === 'theory' && (
             <div className="animate-fadeIn">
               <TheorySection 
@@ -833,7 +840,7 @@ export default function App() {
               )}
             </div>
           )}
-
+          </React.Suspense>
         </div>
 
       </main>

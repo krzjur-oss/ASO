@@ -30,6 +30,56 @@ import DirectoryTreeVisualizer from './DirectoryTreeVisualizer';
 import LinuxFileBrowser from './LinuxFileBrowser';
 import LinuxNotepad from './LinuxNotepad';
 
+export interface AnsiSegment {
+  text: string;
+  color: 'blue' | 'green' | 'red' | 'amber' | null;
+}
+
+/**
+ * Universal ANSI parser that decomposes strings with \x1b[34m (dirs), \x1b[32m (executables),
+ * \x1b[31m (grep/red), \x1b[33m (warnings) and \x1b[0m (reset) into styled React segments,
+ * ensuring no raw ANSI escape codes ever leak into the DOM.
+ */
+export function parseAnsiText(text: string): AnsiSegment[] {
+  const ansiRegex = /\x1b\[([0-9;]*)m/g;
+  const segments: AnsiSegment[] = [];
+  let lastIndex = 0;
+  let currentColor: AnsiSegment['color'] = null;
+
+  let match: RegExpExecArray | null;
+  while ((match = ansiRegex.exec(text)) !== null) {
+    const textBefore = text.slice(lastIndex, match.index);
+    if (textBefore) {
+      segments.push({ text: textBefore, color: currentColor });
+    }
+    const code = match[1];
+    if (code === '0' || code === '' || code === '39') {
+      currentColor = null;
+    } else if (code === '34') {
+      currentColor = 'blue'; // directories (sky-400)
+    } else if (code === '32') {
+      currentColor = 'green'; // executable files (green-400)
+    } else if (code === '31') {
+      currentColor = 'red'; // grep matches / errors (red-400)
+    } else if (code === '33') {
+      currentColor = 'amber'; // warnings / highlights (amber-400)
+    }
+    lastIndex = ansiRegex.lastIndex;
+  }
+  const remaining = text.slice(lastIndex);
+  if (remaining) {
+    segments.push({ text: remaining, color: currentColor });
+  }
+
+  // Strip any leftover rogue \x1b[...] escape sequences to guarantee clean output
+  return segments
+    .map(s => ({
+      ...s,
+      text: s.text.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '').replace(/\x1b/g, '')
+    }))
+    .filter(s => s.text.length > 0);
+}
+
 interface LinuxTerminalProps {
   key?: React.Key;
   vfs?: Record<string, VFSNode>;
@@ -876,48 +926,46 @@ export default function LinuxTerminal({
                 id="terminal-console-body"
               >
                 {terminalLog.map((line, idx) => {
-                  let colorClass = 'text-white';
+                  let colorClass = 'text-stone-200';
                   if (line.type === 'input') colorClass = 'text-green-400 font-semibold';
                   if (line.type === 'error') colorClass = 'text-red-400 font-medium';
                   if (line.type === 'success') colorClass = 'text-amber-400 font-medium';
-                  if (line.type === 'output' && line.text.includes('\x1b[34m')) {
-                    const parts = line.text.split('    ');
-                    return (
-                      <div key={idx} className="flex flex-wrap gap-4 leading-relaxed">
-                        {parts.map((p, pIdx) => {
-                          const isDir = p.includes('\x1b[34m');
-                          const cleanName = p.replace(/\x1b\[34m/g, '').replace(/\x1b\[0m/g, '');
-                          return (
-                            <span 
-                              key={pIdx} 
-                              className={isDir ? 'text-sky-400 font-bold hover:underline' : 'text-stone-200'}
-                            >
-                              {cleanName}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    );
-                  }
 
-                  if (line.text.includes('\x1b[31m')) {
-                    const parts = line.text.split(/(\x1b\[31m.*?\x1b\[0m)/g);
-                    return (
-                      <div key={idx} className={`leading-relaxed whitespace-pre-wrap ${colorClass}`}>
-                        {parts.map((part, pIdx) => {
-                          if (part.startsWith('\x1b[31m') && part.endsWith('\x1b[0m')) {
-                            const cleanText = part.substring(7, part.length - 4);
-                            return <span key={pIdx} className="text-red-400 font-bold bg-red-500/10 px-1 rounded">{cleanText}</span>;
-                          }
-                          return part;
-                        })}
-                      </div>
-                    );
-                  }
+                  const segments = parseAnsiText(line.text);
 
                   return (
                     <div key={idx} className={`leading-relaxed whitespace-pre-wrap ${colorClass}`}>
-                      {line.text}
+                      {segments.map((seg, sIdx) => {
+                        if (seg.color === 'blue') {
+                          return (
+                            <span key={sIdx} className="text-sky-400 font-bold hover:underline">
+                              {seg.text}
+                            </span>
+                          );
+                        }
+                        if (seg.color === 'green') {
+                          return (
+                            <span key={sIdx} className="text-green-400 font-bold">
+                              {seg.text}
+                            </span>
+                          );
+                        }
+                        if (seg.color === 'red') {
+                          return (
+                            <span key={sIdx} className="text-red-400 font-bold bg-red-500/10 px-0.5 rounded">
+                              {seg.text}
+                            </span>
+                          );
+                        }
+                        if (seg.color === 'amber') {
+                          return (
+                            <span key={sIdx} className="text-amber-400 font-bold">
+                              {seg.text}
+                            </span>
+                          );
+                        }
+                        return <span key={sIdx}>{seg.text}</span>;
+                      })}
                     </div>
                   );
                 })}
