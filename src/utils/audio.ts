@@ -85,10 +85,13 @@ export function playSuccessSound() {
 type SpeechListener = (speakingText: string | null) => void;
 const speechListeners = new Set<SpeechListener>();
 let activeSpeakingText: string | null = null;
-let activeUtterance: SpeechSynthesisUtterance | null = null;
-let speechQueue: string[] = [];
-let queueIndex = 0;
-let heartbeatTimer: any = null;
+let currentSessionId = 0;
+let chunkWatchdogTimer: any = null;
+
+// Global array to prevent Chromium from garbage collecting active utterances
+if (typeof window !== 'undefined') {
+  (window as any).__speechUtterances = (window as any).__speechUtterances || [];
+}
 
 export function subscribeSpeech(listener: SpeechListener) {
   speechListeners.add(listener);
@@ -100,23 +103,29 @@ export function subscribeSpeech(listener: SpeechListener) {
 
 function notifySpeechListeners(text: string | null) {
   activeSpeakingText = text;
-  speechListeners.forEach(listener => listener(text));
+  speechListeners.forEach(listener => {
+    try {
+      listener(text);
+    } catch {
+      // ignore
+    }
+  });
 }
 
 /**
  * Finds the best Polish voice available in the browser
  */
 function getPolishVoice(): SpeechSynthesisVoice | null {
-  if (!('speechSynthesis' in window)) return null;
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
   const voices = window.speechSynthesis.getVoices();
   if (!voices || voices.length === 0) return null;
 
-  // 1. Exact match for pl-PL or pl_PL
-  const exactPl = voices.find(v => v.lang === 'pl-PL' || v.lang === 'pl_PL');
+  // 1. Exact Polish match (pl-PL, pl_PL, pl)
+  const exactPl = voices.find(v => v.lang === 'pl-PL' || v.lang === 'pl_PL' || v.lang.toLowerCase() === 'pl');
   if (exactPl) return exactPl;
 
-  // 2. Contains 'pl' in lang
-  const containsPl = voices.find(v => v.lang.toLowerCase().includes('pl'));
+  // 2. Contains 'pl' in lang code
+  const containsPl = voices.find(v => v.lang.toLowerCase().startsWith('pl'));
   if (containsPl) return containsPl;
 
   // 3. Contains 'polish' or 'polski' in name
@@ -127,177 +136,216 @@ function getPolishVoice(): SpeechSynthesisVoice | null {
 }
 
 /**
- * Splits text into natural sentence chunks (max ~150 chars)
- * This prevents Chromium's native TTS engine buffer overflow and 15-second cut-off bug.
+ * Splits text into natural, digestible Polish speech phrases (max ~120 chars)
+ * This prevents speech engine buffer overflows, memory cut-offs, and phonetic stutter.
  */
-function splitTextIntoSentences(text: string, maxChunkLength = 150): string[] {
-  // Clean markup and special formatting characters
+function cleanAndSplitText(text: string): string[] {
+  if (!text) return [];
+
+  // Replace tech symbols and paths with natural spoken Polish words
   const sanitized = text
+    .replace(/C:\\/gi, ' dysk C, ')
+    .replace(/D:\\/gi, ' dysk D, ')
+    .replace(/E:\\/gi, ' dysk E, ')
+    .replace(/C:/gi, ' dysk C ')
+    .replace(/D:/gi, ' dysk D ')
+    .replace(/System32/gi, ' System 32 ')
+    .replace(/Program Files/gi, ' Program Files ')
+    .replace(/ProgramData/gi, ' Program Data ')
+    .replace(/\.txt\b/gi, ' kropka te iks te ')
+    .replace(/\.exe\b/gi, ' kropka e iks e ')
+    .replace(/\.png\b/gi, ' kropka pe en gie ')
+    .replace(/\.jpg\b/gi, ' kropka jot pe gie ')
+    .replace(/\.mp3\b/gi, ' kropka em pe trzy ')
+    .replace(/\.wav\b/gi, ' kropka wav ')
     .replace(/[*_`#~•]/g, ' ')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/\\/g, ' ukośnik ')
     .replace(/\//g, ' ukośnik ')
     .replace(/:/g, ' dwukropek ')
+    .replace(/[„"”]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 
   if (!sanitized) return [];
 
-  // Match sentences ending in punctuation
-  const sentenceRegex = /[^.!?;\n]+[.!?;\n]*/g;
-  const rawMatches = sanitized.match(sentenceRegex) || [sanitized];
-
+  // Split by sentence boundaries (. ! ?)
+  const rawSentences = sanitized.match(/[^.!?]+[.!?]*/g) || [sanitized];
   const chunks: string[] = [];
 
-  for (const raw of rawMatches) {
-    const trimmed = raw.trim();
+  for (const s of rawSentences) {
+    const trimmed = s.trim();
     if (!trimmed) continue;
 
-    if (trimmed.length <= maxChunkLength) {
+    if (trimmed.length <= 130) {
       chunks.push(trimmed);
     } else {
-      // Split long compound sentences on commas or spaces
-      const parts = trimmed.split(/([,]\s+)/);
-      let currentPart = '';
-
-      for (const segment of parts) {
-        if ((currentPart + segment).length <= maxChunkLength) {
-          currentPart += segment;
+      // Split long compound sentences on commas, semicolons, or natural pauses
+      const parts = trimmed.split(/([,;]\s+)/);
+      let cur = '';
+      for (const p of parts) {
+        if ((cur + p).length <= 130) {
+          cur += p;
         } else {
-          if (currentPart.trim()) {
-            chunks.push(currentPart.trim());
-          }
-          currentPart = segment;
+          if (cur.trim()) chunks.push(cur.trim());
+          cur = p;
         }
       }
-      if (currentPart.trim()) {
-        chunks.push(currentPart.trim());
-      }
-    }
-  }
-
-  // Fallback if no punctuation was present
-  if (chunks.length === 0 && sanitized.length > 0) {
-    for (let i = 0; i < sanitized.length; i += maxChunkLength) {
-      chunks.push(sanitized.slice(i, i + maxChunkLength).trim());
+      if (cur.trim()) chunks.push(cur.trim());
     }
   }
 
   return chunks.filter(c => c.length > 0);
 }
 
-function speakNextInQueue() {
-  if (!activeSpeakingText || queueIndex >= speechQueue.length) {
-    stopSpeaking();
+function clearWatchdog() {
+  if (chunkWatchdogTimer) {
+    clearTimeout(chunkWatchdogTimer);
+    chunkWatchdogTimer = null;
+  }
+}
+
+/**
+ * Speaks a list of chunked strings sequentially with rock-solid session handling
+ */
+function playSessionQueue(sessionId: number, fullOriginalText: string, chunks: string[], index: number) {
+  if (sessionId !== currentSessionId) return;
+
+  if (index >= chunks.length) {
+    // All chunks finished cleanly
+    if (activeSpeakingText === fullOriginalText) {
+      stopSpeaking();
+    }
     return;
   }
 
-  const chunk = speechQueue[queueIndex];
+  const chunk = chunks[index];
   const utterance = new SpeechSynthesisUtterance(chunk);
-  activeUtterance = utterance;
-  // Store reference on window to prevent Chrome's Garbage Collection bug from killing audio mid-speech
-  (window as any).__activeSpeechUtterance = utterance;
-
   utterance.lang = 'pl-PL';
+
   const voice = getPolishVoice();
   if (voice) {
     utterance.voice = voice;
   }
+
   utterance.rate = 1.0;
   utterance.pitch = 1.0;
 
-  utterance.onend = () => {
-    queueIndex++;
-    if (activeSpeakingText) {
-      // Brief pause between sentences for natural breathing cadence
-      setTimeout(() => {
-        if (activeSpeakingText) {
-          speakNextInQueue();
-        }
-      }, 50);
+  // Protect utterance from garbage collection by anchoring it globally
+  if (typeof window !== 'undefined') {
+    (window as any).__speechUtterances = (window as any).__speechUtterances || [];
+    (window as any).__speechUtterances.push(utterance);
+  }
+
+  let hasEnded = false;
+  const finishChunk = () => {
+    if (hasEnded) return;
+    hasEnded = true;
+    clearWatchdog();
+
+    // Clean up reference
+    if (typeof window !== 'undefined' && (window as any).__speechUtterances) {
+      const arr = (window as any).__speechUtterances;
+      const idx = arr.indexOf(utterance);
+      if (idx > -1) arr.splice(idx, 1);
     }
+
+    if (sessionId === currentSessionId && activeSpeakingText === fullOriginalText) {
+      // Short 40ms pause between chunks for natural cadence
+      setTimeout(() => {
+        if (sessionId === currentSessionId) {
+          playSessionQueue(sessionId, fullOriginalText, chunks, index + 1);
+        }
+      }, 40);
+    }
+  };
+
+  utterance.onend = () => {
+    finishChunk();
   };
 
   utterance.onerror = (e) => {
     if (e.error === 'canceled' || e.error === 'interrupted') {
+      clearWatchdog();
       return;
     }
-    console.warn('SpeechSynthesis chunk error:', e);
-    queueIndex++;
-    if (queueIndex < speechQueue.length && activeSpeakingText) {
-      speakNextInQueue();
-    } else {
-      stopSpeaking();
-    }
+    console.warn(`TTS Chunk ${index + 1}/${chunks.length} warning:`, e.error);
+    finishChunk();
   };
 
-  window.speechSynthesis.speak(utterance);
+  // Watchdog timer: If a browser speech engine hangs or misses the onend event,
+  // ensure we automatically advance to the next chunk after expected duration + buffer.
+  const estimatedMs = Math.max(3000, (chunk.length / 7) * 1000 + 4000);
+  clearWatchdog();
+  chunkWatchdogTimer = setTimeout(() => {
+    if (!hasEnded && sessionId === currentSessionId) {
+      finishChunk();
+    }
+  }, estimatedMs);
+
+  try {
+    window.speechSynthesis.speak(utterance);
+  } catch (err) {
+    console.warn('speechSynthesis.speak failed:', err);
+    finishChunk();
+  }
 }
 
 /**
- * Reads Polish text aloud using SpeechSynthesis with reliable chunking & keep-alive
+ * Reads Polish text aloud using SpeechSynthesis with robust chunking & session isolation
  */
 export function speakText(text: string) {
-  if (!('speechSynthesis' in window)) {
-    console.warn('Speech synthesis not supported in this browser');
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    console.warn('Speech synthesis not supported in this environment');
     return;
   }
 
-  // If clicking the currently speaking item, stop/toggle it
+  // If clicking the currently speaking item, stop / toggle it off
   if (activeSpeakingText === text) {
     stopSpeaking();
     return;
   }
 
-  // Stop any ongoing speech first
+  // Stop any active speech first
   stopSpeaking();
 
-  const chunks = splitTextIntoSentences(text);
+  const chunks = cleanAndSplitText(text);
   if (chunks.length === 0) return;
 
-  activeSpeakingText = text;
-  speechQueue = chunks;
-  queueIndex = 0;
+  const sessionId = ++currentSessionId;
   notifySpeechListeners(text);
 
-  // Chromium keep-alive heartbeat: Chrome has an old bug where speechSynthesis
-  // can pause or freeze after ~14 seconds without pause/resume heartbeat
-  if (heartbeatTimer) clearInterval(heartbeatTimer);
-  heartbeatTimer = setInterval(() => {
-    if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
-      window.speechSynthesis.pause();
-      window.speechSynthesis.resume();
+  // Allow browser speech subsystem 50ms to cleanly reset after cancel() before feeding new utterances
+  setTimeout(() => {
+    if (sessionId === currentSessionId) {
+      // If voices are not yet loaded, wait for voiceschanged
+      if (window.speechSynthesis.getVoices().length === 0) {
+        window.speechSynthesis.onvoiceschanged = () => {
+          if (sessionId === currentSessionId) {
+            playSessionQueue(sessionId, text, chunks, 0);
+          }
+        };
+      }
+      playSessionQueue(sessionId, text, chunks, 0);
     }
-  }, 5000);
-
-  // Ensure voices are loaded (e.g. async in Chrome)
-  if (window.speechSynthesis.getVoices().length === 0) {
-    window.speechSynthesis.onvoiceschanged = () => {
-      speakNextInQueue();
-    };
-  }
-
-  speakNextInQueue();
+  }, 50);
 }
 
 /**
- * Stops any ongoing text-to-speech output
+ * Stops any ongoing text-to-speech output immediately
  */
 export function stopSpeaking() {
-  if (heartbeatTimer) {
-    clearInterval(heartbeatTimer);
-    heartbeatTimer = null;
-  }
-  speechQueue = [];
-  queueIndex = 0;
-  activeUtterance = null;
-  (window as any).__activeSpeechUtterance = null;
+  currentSessionId++;
+  clearWatchdog();
 
-  if ('speechSynthesis' in window) {
-    try {
-      window.speechSynthesis.cancel();
-    } catch {
-      // ignore
+  if (typeof window !== 'undefined') {
+    (window as any).__speechUtterances = [];
+    if ('speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {
+        // ignore
+      }
     }
   }
 
